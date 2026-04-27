@@ -2387,19 +2387,38 @@ function _fbSave(){
   },800);
 }
 
-function _fbLoad(data){
+function _fbLoad(data, fromRemote){
   if(!data)return;
-  depuradas=(data.dep||[]).map(function(d){return Object.assign({},RAW[d.id]||{},{_rowId:d.id,_motivo:d.m||'',_timestamp:d.t||0,_depTime:d.dt||'',_tipo:d.tp||'depurada',_isPartial:!!d.pt});});
-  depIds=new Set(depuradas.map(function(d){return d._rowId;}));
-  no_deseadas=(data.nd||[]).map(function(d){return Object.assign({},RAW[d.id]||{},{_rowId:d.id,_motivo:d.m||'',_timestamp:d.t||0,_isPartial:!!d.pt,_tipo:'no-deseada'});});
-  if(data.fv)localStorage.setItem(FAV_KEY,JSON.stringify(data.fv));
-  if(data.bn)localStorage.setItem(BAN_KEY,JSON.stringify(data.bn));
-  if(data.tm)localStorage.setItem(TOMADAS_KEY,JSON.stringify(data.tm));
-  if(data.sl)selectedSet=new Set(data.sl);
-  updateCounts();renderBannedChips();applyFilters();
-  if(currentTab==='dep')renderDepuradas();
-  if(currentTab==='no-des')renderNoDeseadas();
-  if(currentTab==='stats')renderStats();
+  try {
+    depuradas=(data.dep||[]).map(function(d){return Object.assign({},RAW[d.id]||{},{_rowId:d.id,_motivo:d.m||'',_timestamp:d.t||0,_depTime:d.dt||'',_tipo:d.tp||'depurada',_isPartial:!!d.pt});});
+    depIds=new Set(depuradas.map(function(d){return d._rowId;}));
+    no_deseadas=(data.nd||[]).map(function(d){return Object.assign({},RAW[d.id]||{},{_rowId:d.id,_motivo:d.m||'',_timestamp:d.t||0,_isPartial:!!d.pt,_tipo:'no-deseada'});});
+    // Actualizar localStorage (para tener caché local actualizada)
+    localStorage.setItem('serums_dep',          JSON.stringify(depuradas));
+    localStorage.setItem('serums_no_deseadas',  JSON.stringify(no_deseadas));
+    localStorage.setItem(FAV_KEY,    JSON.stringify(data.fv||[]));
+    localStorage.setItem(BAN_KEY,    JSON.stringify(data.bn||[]));
+    localStorage.setItem(TOMADAS_KEY,JSON.stringify(data.tm||{}));
+    if(data.sl) selectedSet=new Set(data.sl);
+    updateCounts(); renderBannedChips(); applyFilters();
+    if(currentTab==='dep')    renderDepuradas();
+    if(currentTab==='no-des') renderNoDeseadas();
+    if(currentTab==='stats')  renderStats();
+    // Toast de sincronización remota
+    if(fromRemote) _showSyncToast();
+  } catch(e){ console.error('[FB] _fbLoad error:',e); }
+}
+
+function _showSyncToast(){
+  var t=document.getElementById('remote-sync-toast');
+  if(!t){ t=document.createElement('div'); t.id='remote-sync-toast';
+    t.style.cssText='position:fixed;top:14px;left:50%;transform:translateX(-50%);background:#0ea5e9;color:#fff;font-family:\'Sora\',sans-serif;font-size:12px;font-weight:600;padding:8px 18px;border-radius:20px;box-shadow:0 4px 16px rgba(0,0,0,.35);z-index:99999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap';
+    document.body.appendChild(t);
+  }
+  t.textContent='📡 Cambios recibidos desde otro dispositivo';
+  t.style.opacity='1';
+  clearTimeout(t._t);
+  t._t=setTimeout(function(){t.style.opacity='0';},3000);
 }
 
 var _os=saveState; saveState=function(){_os();_fbSave();};
@@ -2450,18 +2469,21 @@ if(_fbAuth){
       _unsubSnapshot = _fbDb.collection('users').doc(user.uid).onSnapshot(
         function(doc){
           if(!_fbReady){
-            // Primera carga: cargar siempre
-            if(doc.exists) _fbLoad(doc.data());
+            // ── Primera carga ──
+            if(doc.exists) _fbLoad(doc.data(), false);
             _fbReady=true; _syncUI('ok');
           } else {
-            // Actualización posterior: ignorar si vino de este mismo dispositivo
-            var d=doc.data();
-            if(d && d.dev===_DEVICE_ID){
-              _syncUI('ok'); // fue nuestro propio guardado confirmado
-              return;
+            // ── Actualización posterior ──
+            var d=doc.exists ? doc.data() : null;
+            if(!d){ return; } // documento borrado
+            if(d.dev===_DEVICE_ID){
+              // Nuestro propio guardado confirmado por el servidor
+              _syncUI('ok'); return;
             }
-            // Vino de OTRO dispositivo → actualizar la vista
-            if(doc.exists){ _fbLoad(d); _syncUI('ok'); }
+            // ── Cambio de OTRO dispositivo → actualizar en tiempo real ──
+            console.log('[FB] 📡 Cambio remoto recibido de:', d.dev);
+            _fbLoad(d, true); // true = mostrar toast
+            _syncUI('ok');
           }
         },
         function(e){ console.error('[FB] Snapshot:',e); _fbReady=true; _syncUI('error'); }
