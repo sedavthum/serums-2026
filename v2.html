@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -569,30 +569,12 @@
   .sync-badge.ok    { color: #2ed573; border-color: rgba(46,213,115,0.3); }
   .sync-badge.error { color: #ff4757; border-color: rgba(255,71,87,0.3); }
   .sync-badge.spin  { color: #ffc107; border-color: rgba(255,193,7,0.3); }
-  #loading-overlay {
-    position: fixed; inset: 0; z-index: 99999;
-    background: var(--bg);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 18px;
-  }
-  #loading-overlay.hidden { display: none; }
-  .loading-logo {
-    width: 60px; height: 60px;
-    background: linear-gradient(135deg, var(--accent), #0066ff);
-    border-radius: 16px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 28px; font-weight: 700; color: #fff;
-    font-family: 'IBM Plex Mono', monospace;
-  }
-  .loading-spinner {
-    width: 36px; height: 36px;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { font-size: 13px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+  .sync-spin {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+  }
 </style>
 </head>
 <body>
@@ -628,17 +610,6 @@
       </div>
     </div>
   </div>
-</div>
-<!-- Loading overlay -->
-<div id="loading-overlay">
-  <div class="loading-logo">S</div>
-  <div class="loading-spinner"></div>
-  <div class="loading-text" id="loading-text">Iniciando...</div>
-  <button id="btn-sign-in-overlay" onclick="_signInGoogle()"
-    style="display:none;background:white;color:#444;border:none;border-radius:10px;padding:10px 20px;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;align-items:center;gap:8px;margin-top:8px;box-shadow:0 2px 12px rgba(0,0,0,0.3)">
-    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:18px;height:18px;vertical-align:middle;margin-right:4px">
-    Continuar con Google
-  </button>
 </div>
 
 <div class="tabs">
@@ -2356,287 +2327,134 @@ document.getElementById('btn-no-deseada-tipo')?.addEventListener('click', functi
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  FIREBASE V2 — Sincronización con Google Sign-in
-//  Cada usuario inicia sesión con Google y sus datos se guardan
-//  en Firestore bajo su UID → accesible desde cualquier dispositivo
+//  FIREBASE V2 — Google Sign-in + Firestore sync
+//  - La app carga inmediatamente desde localStorage (no bloquea)
+//  - Firebase corre en segundo plano
+//  - Al iniciar sesión con Google → datos en cualquier dispositivo
 // ═══════════════════════════════════════════════════════════════
+try { firebase.initializeApp({
+  apiKey:"AIzaSyARVP8G55nTyg-napwDhuJrR1K5kthahbs",
+  authDomain:"plazas-serums-2026-medicina.firebaseapp.com",
+  projectId:"plazas-serums-2026-medicina",
+  storageBucket:"plazas-serums-2026-medicina.firebasestorage.app",
+  messagingSenderId:"633111865977",
+  appId:"1:633111865977:web:0f6048b79645a3c19782a8"
+}); } catch(e){ console.warn('[FB] Init:',e); }
 
-const _FB_CONFIG = {
-  apiKey: "AIzaSyARVP8G55nTyg-napwDhuJrR1K5kthahbs",
-  authDomain: "plazas-serums-2026-medicina.firebaseapp.com",
-  projectId: "plazas-serums-2026-medicina",
-  storageBucket: "plazas-serums-2026-medicina.firebasestorage.app",
-  messagingSenderId: "633111865977",
-  appId: "1:633111865977:web:0f6048b79645a3c19782a8"
-};
+var _fbAuth=null,_fbDb=null,_fbUser=null,_fbReady=false,_saveTimer=null;
+try { _fbAuth=firebase.auth(); _fbDb=firebase.firestore(); } catch(e){ console.warn('[FB] SDK:',e); }
 
-firebase.initializeApp(_FB_CONFIG);
-const _fbAuth = firebase.auth();
-const _fbDb   = firebase.firestore();
-let _fbUser   = null;
-let _fbReady  = false;
-let _saveTimer = null;
-const _googleProvider = new firebase.auth.GoogleAuthProvider();
-
-// ── Iniciar sesión con Google ──
-function _signInGoogle() {
-  _fbAuth.signInWithPopup(_googleProvider).catch(function(err) {
-    console.error('[FB] Error sign-in:', err);
-    if (err.code !== 'auth/popup-closed-by-user') {
-      alert('Error al iniciar sesión: ' + err.message);
-    }
-  });
-}
-
-// ── Cerrar sesión ──
-function _signOut() {
-  if (!confirm('¿Cerrar sesión? Tus cambios están guardados en la nube.')) return;
-  _fbAuth.signOut().then(function() {
-    _fbUser = null;
-    _fbReady = false;
-    _syncUI('offline');
-  });
-}
-
-// ── Sync status indicator ──
-function _syncUI(state) {
-  const badge    = document.getElementById('sync-badge');
-  const status   = document.getElementById('sync-status');
-  const signInBtn = document.getElementById('btn-sign-in');
-  const overlayBtn = document.getElementById('btn-sign-in-overlay');
-  const userArea = document.getElementById('user-area');
-  const userName = document.getElementById('user-name');
-  const userPhoto= document.getElementById('user-photo');
-  if (!badge || !status) return;
-
-  badge.className = 'sync-badge';
-  const map = {
-    loading:  { cls:'spin', text:'⟳ Cargando...' },
-    saving:   { cls:'spin', text:'↑ Guardando...' },
-    ok:       { cls:'ok',  text:'☁ Nube ✓' },
-    offline:  { cls:'',    text:'💾 Sin sesión' },
-    error:    { cls:'error',text:'⚠ Error sync' }
-  };
-  const s = map[state] || map.offline;
-  badge.classList.add(s.cls);
-  status.textContent = s.text;
-
-  const loggedIn = (state !== 'offline');
-  if (signInBtn)  signInBtn.style.display  = loggedIn ? 'none' : 'flex';
-  if (userArea)   userArea.style.display   = loggedIn ? 'flex' : 'none';
-  if (overlayBtn) overlayBtn.style.display = 'none';
-
-  if (loggedIn && _fbUser && userName) {
-    const name = _fbUser.displayName || _fbUser.email || 'Usuario';
-    userName.textContent = '👤 ' + name;
-    if (userPhoto && _fbUser.photoURL) {
-      userPhoto.src = _fbUser.photoURL;
-      userPhoto.style.display = 'block';
-    }
+function _syncUI(state){
+  var badge=document.getElementById('sync-badge');
+  var status=document.getElementById('sync-status');
+  var signIn=document.getElementById('btn-sign-in');
+  var userArea=document.getElementById('user-area');
+  var userName=document.getElementById('user-name');
+  var userPhoto=document.getElementById('user-photo');
+  if(!badge)return;
+  badge.className='sync-badge';
+  var M={checking:['','🔄 Verificando...'],loading:['spin','⟳ Cargando...'],saving:['spin','↑ Guardando...'],ok:['ok','☁ Nube ✓'],offline:['','💾 Sin sesión'],error:['error','⚠ Error']};
+  var s=M[state]||M.offline;
+  if(s[0])badge.classList.add(s[0]);
+  if(status)status.textContent=s[1];
+  var li=!!_fbUser;
+  if(signIn)signIn.style.display=li?'none':'flex';
+  if(userArea)userArea.style.display=li?'flex':'none';
+  if(li&&_fbUser&&userName){
+    userName.textContent=_fbUser.displayName||_fbUser.email||'Usuario';
+    if(userPhoto&&_fbUser.photoURL){userPhoto.src=_fbUser.photoURL;userPhoto.style.display='block';}
   }
 }
 
-// ── Comprimir estado para Firestore ──
-function _toFirestore() {
-  return {
-    dep: depuradas.map(d => ({
-      id: d._rowId,
-      m:  d._motivo  || '',
-      t:  d._timestamp || 0,
-      dt: d._depTime  || '',
-      tp: d._tipo     || 'depurada',
-      pt: d._isPartial ? 1 : 0
-    })),
-    nd: no_deseadas.map(d => ({
-      id: d._rowId,
-      m:  d._motivo  || '',
-      t:  d._timestamp || 0,
-      pt: d._isPartial ? 1 : 0
-    })),
-    fv: getFavs(),
-    bn: getBanned(),
-    tm: getTomidasMap(),
-    sl: [...selectedSet],
-    ua: firebase.firestore.FieldValue.serverTimestamp()
-  };
-}
-
-// ── Guardar en Firestore (con debounce 600ms) ──
-function _fbScheduleSave() {
-  if (!_fbUser || !_fbReady) return;
+function _fbSave(){
+  if(!_fbUser||!_fbDb||!_fbReady)return;
   _syncUI('saving');
   clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(function() {
-    _fbDb.collection('users').doc(_fbUser.uid)
-      .set(_toFirestore())
-      .then(function() { _syncUI('ok'); })
-      .catch(function(err) {
-        console.error('[FB] Error al guardar:', err);
-        _syncUI('error');
-      });
-  }, 600);
+  _saveTimer=setTimeout(function(){
+    var data={
+      dep:depuradas.map(function(d){return{id:d._rowId,m:d._motivo||'',t:d._timestamp||0,dt:d._depTime||'',tp:d._tipo||'depurada',pt:d._isPartial?1:0};}),
+      nd:no_deseadas.map(function(d){return{id:d._rowId,m:d._motivo||'',t:d._timestamp||0,pt:d._isPartial?1:0};}),
+      fv:getFavs(),bn:getBanned(),tm:getTomidasMap(),sl:Array.from(selectedSet),
+      ua:firebase.firestore.FieldValue.serverTimestamp()
+    };
+    _fbDb.collection('users').doc(_fbUser.uid).set(data)
+      .then(function(){_syncUI('ok');})
+      .catch(function(e){console.error('[FB] Save:',e);_syncUI('error');});
+  },800);
 }
 
-// ── Cargar estado desde Firestore ──
-function _fromFirestore(data) {
-  if (!data) return;
-
-  // Reconstruir depuradas desde RAW
-  depuradas = (data.dep || []).map(function(d) {
-    const raw = RAW[d.id] || {};
-    return Object.assign({}, raw, {
-      _rowId:    d.id,
-      _motivo:   d.m  || '',
-      _timestamp:d.t  || 0,
-      _depTime:  d.dt || '',
-      _tipo:     d.tp || 'depurada',
-      _isPartial:!!d.pt
-    });
-  });
-  depIds = new Set(depuradas.map(function(d) { return d._rowId; }));
-
-  // Reconstruir no_deseadas desde RAW
-  no_deseadas = (data.nd || []).map(function(d) {
-    const raw = RAW[d.id] || {};
-    return Object.assign({}, raw, {
-      _rowId:    d.id,
-      _motivo:   d.m  || '',
-      _timestamp:d.t  || 0,
-      _isPartial:!!d.pt,
-      _tipo:    'no-deseada'
-    });
-  });
-
-  // Restaurar favoritos en localStorage
-  if (data.fv) localStorage.setItem(FAV_KEY, JSON.stringify(data.fv));
-
-  // Restaurar baneados en localStorage
-  if (data.bn) localStorage.setItem(BAN_KEY, JSON.stringify(data.bn));
-
-  // Restaurar plazas tomadas en localStorage
-  if (data.tm) localStorage.setItem(TOMADAS_KEY, JSON.stringify(data.tm));
-
-  // Restaurar seleccionados en memoria
-  if (data.sl) selectedSet = new Set(data.sl);
-
-  // Re-renderizar todo
-  updateCounts();
-  renderBannedChips();
-  applyFilters();
-  if (currentTab === 'dep')    renderDepuradas();
-  if (currentTab === 'no-des') renderNoDeseadas();
-  if (currentTab === 'stats')  renderStats();
+function _fbLoad(data){
+  if(!data)return;
+  depuradas=(data.dep||[]).map(function(d){return Object.assign({},RAW[d.id]||{},{_rowId:d.id,_motivo:d.m||'',_timestamp:d.t||0,_depTime:d.dt||'',_tipo:d.tp||'depurada',_isPartial:!!d.pt});});
+  depIds=new Set(depuradas.map(function(d){return d._rowId;}));
+  no_deseadas=(data.nd||[]).map(function(d){return Object.assign({},RAW[d.id]||{},{_rowId:d.id,_motivo:d.m||'',_timestamp:d.t||0,_isPartial:!!d.pt,_tipo:'no-deseada'});});
+  if(data.fv)localStorage.setItem(FAV_KEY,JSON.stringify(data.fv));
+  if(data.bn)localStorage.setItem(BAN_KEY,JSON.stringify(data.bn));
+  if(data.tm)localStorage.setItem(TOMADAS_KEY,JSON.stringify(data.tm));
+  if(data.sl)selectedSet=new Set(data.sl);
+  updateCounts();renderBannedChips();applyFilters();
+  if(currentTab==='dep')renderDepuradas();
+  if(currentTab==='no-des')renderNoDeseadas();
+  if(currentTab==='stats')renderStats();
 }
 
-// ── Interceptar saveState ──
-const _orig_saveState = saveState;
-saveState = function() {
-  _orig_saveState();
-  _fbScheduleSave();
-};
+var _os=saveState; saveState=function(){_os();_fbSave();};
+var _ob=saveBanned; saveBanned=function(arr){_ob(arr);_fbSave();};
+var _of=saveFavs; saveFavs=function(arr){_of(arr);_fbSave();};
+var _ot=saveTomidasMap; saveTomidasMap=function(map){_ot(map);_fbSave();};
+var _osel=saveSelected; saveSelected=function(){_osel();_fbSave();};
 
-// ── Interceptar saveBanned ──
-const _orig_saveBanned = saveBanned;
-saveBanned = function(arr) {
-  _orig_saveBanned(arr);
-  _fbScheduleSave();
-};
-
-// ── Interceptar saveFavs ──
-const _orig_saveFavs = saveFavs;
-saveFavs = function(arr) {
-  _orig_saveFavs(arr);
-  _fbScheduleSave();
-};
-
-// ── Interceptar saveTomidasMap ──
-const _orig_saveTomidasMap = saveTomidasMap;
-saveTomidasMap = function(map) {
-  _orig_saveTomidasMap(map);
-  _fbScheduleSave();
-};
-
-// ── Interceptar saveSelected ──
-const _orig_saveSelected = saveSelected;
-saveSelected = function() {
-  _orig_saveSelected();
-  _fbScheduleSave();
-};
-
-// ── Interceptar resetAll (también borra en Firestore) ──
-resetAll = function() {
-  const pwd = prompt('Ingrese contraseña para restablecer:');
-  if (pwd === null) return;
-  if (pwd !== '12345') { alert('Contraseña incorrecta.'); return; }
-  if (!confirm('¿Seguro? Se eliminarán favoritos, adjudicadas, no deseadas y departamentos baneados (también en la nube).')) return;
-  if (_fbUser) {
-    _fbDb.collection('users').doc(_fbUser.uid).delete()
-      .catch(function(e) { console.error('[FB] Error al borrar:', e); });
-  }
-  ['serums_dep','serums_no_deseadas','serums_favoritos','serums_banned_deptos',
-   'serums_plazas_tomadas','serums_seleccionados'].forEach(function(k) {
-    localStorage.removeItem(k);
-  });
+resetAll=function(){
+  var pwd=prompt('Ingrese contraseña para restablecer:');
+  if(pwd===null)return;
+  if(pwd!=='12345'){alert('Contraseña incorrecta.');return;}
+  if(!confirm('¿Seguro? Se eliminarán todos los datos (nube incluida si hay sesión).'))return;
+  if(_fbUser&&_fbDb)_fbDb.collection('users').doc(_fbUser.uid).delete().catch(function(){});
+  ['serums_dep','serums_no_deseadas','serums_favoritos','serums_banned_deptos','serums_plazas_tomadas','serums_seleccionados'].forEach(function(k){localStorage.removeItem(k);});
   location.reload();
 };
 
-// ── Google Sign-in → carga datos de Firestore ──
-_syncUI('offline');
+function _signInGoogle(){
+  if(!_fbAuth){alert('Firebase no disponible.');return;}
+  _fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(err){
+    console.error('[FB] SignIn:',err);
+    if(err.code==='auth/unauthorized-domain'){
+      alert('Dominio no autorizado.\n\nEn Firebase Console → Authentication → Settings → Authorized domains → agrega:\n  sedavthum.github.io');
+    } else if(err.code!=='auth/popup-closed-by-user'){
+      alert('Error al iniciar sesión: '+err.message);
+    }
+  });
+}
 
-_fbAuth.onAuthStateChanged(function(user) {
-  if (user) {
-    // Usuario autenticado con Google
-    _fbUser = user;
-    _syncUI('loading');
-    document.getElementById('loading-overlay').classList.remove('hidden');
-    var loadingText = document.getElementById('loading-text');
-    if (loadingText) loadingText.textContent = 'Cargando tus datos...';
+function _signOut(){
+  if(!confirm('¿Cerrar sesión? Tus cambios están guardados en la nube.'))return;
+  if(_fbAuth)_fbAuth.signOut().then(function(){_fbUser=null;_fbReady=false;_syncUI('offline');});
+}
 
-    _fbDb.collection('users').doc(user.uid).get()
-      .then(function(doc) {
-        if (doc.exists) {
-          _fromFirestore(doc.data());
-        }
-        _fbReady = true;
-        _syncUI('ok');
-        document.getElementById('loading-overlay').classList.add('hidden');
-      })
-      .catch(function(err) {
-        console.error('[FB] Error al cargar:', err);
-        _fbReady = true;
-        _syncUI('error');
-        document.getElementById('loading-overlay').classList.add('hidden');
-      });
-  } else {
-    // No hay sesión → mostrar botón de inicio de sesión en el overlay
-    _fbReady = false;
-    _syncUI('offline');
-    var loadingText = document.getElementById('loading-text');
-    if (loadingText) loadingText.textContent = 'Inicia sesión para sincronizar tus datos en la nube';
-    var overlayBtn = document.getElementById('btn-sign-in-overlay');
-    if (overlayBtn) overlayBtn.style.display = 'flex';
-    // Mostrar overlay con botón de login
-    document.getElementById('loading-overlay').classList.remove('hidden');
-    // Permitir usar la app en modo local (sin nube) después de 2s
-    setTimeout(function() {
-      var overlay = document.getElementById('loading-overlay');
-      if (overlay && !_fbUser) {
-        // Agregar enlace "Continuar sin sesión"
-        if (!document.getElementById('btn-skip-login')) {
-          var skipBtn = document.createElement('button');
-          skipBtn.id = 'btn-skip-login';
-          skipBtn.textContent = 'Continuar sin iniciar sesión (solo local)';
-          skipBtn.style.cssText = 'background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:\'Sora\',sans-serif;margin-top:4px;text-decoration:underline';
-          skipBtn.onclick = function() {
-            document.getElementById('loading-overlay').classList.add('hidden');
-          };
-          overlay.appendChild(skipBtn);
-        }
-      }
-    }, 1500);
-  }
-});
+if(_fbAuth){
+  var _fbTimeout=setTimeout(function(){
+    if(!_fbReady&&!_fbUser){console.warn('[FB] Timeout');_syncUI('offline');}
+  },8000);
+  _syncUI('checking');
+  _fbAuth.onAuthStateChanged(function(user){
+    clearTimeout(_fbTimeout);
+    if(user){
+      _fbUser=user; _syncUI('loading');
+      _fbDb.collection('users').doc(user.uid).get()
+        .then(function(doc){
+          if(doc.exists)_fbLoad(doc.data());
+          _fbReady=true; _syncUI('ok');
+        })
+        .catch(function(e){console.error('[FB] Load:',e);_fbReady=true;_syncUI('error');});
+    } else {
+      _fbReady=false; _fbUser=null; _syncUI('offline');
+    }
+  });
+} else {
+  _syncUI('offline');
+}
 </script>
+
 
 </body>
 </html>
