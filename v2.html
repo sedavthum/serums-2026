@@ -2377,7 +2377,7 @@ function _fbSave(){
     var data={
       dep:depuradas.map(function(d){return{id:d._rowId,m:d._motivo||'',t:d._timestamp||0,dt:d._depTime||'',tp:d._tipo||'depurada',pt:d._isPartial?1:0};}),
       nd:no_deseadas.map(function(d){return{id:d._rowId,m:d._motivo||'',t:d._timestamp||0,pt:d._isPartial?1:0};}),
-      fv:getFavs(),bn:getBanned(),tm:getTomidasMap(),sl:Array.from(selectedSet),
+      fv:getFavs(),bn:getBanned(),tm:getTomidasMap(),
       ua:firebase.firestore.FieldValue.serverTimestamp(),
       dev:_DEVICE_ID  // identifica qué dispositivo guardó — permite ignorarlo en onSnapshot
     };
@@ -2399,7 +2399,6 @@ function _fbLoad(data, fromRemote){
     localStorage.setItem(FAV_KEY,    JSON.stringify(data.fv||[]));
     localStorage.setItem(BAN_KEY,    JSON.stringify(data.bn||[]));
     localStorage.setItem(TOMADAS_KEY,JSON.stringify(data.tm||{}));
-    if(data.sl) selectedSet=new Set(data.sl);
     updateCounts(); renderBannedChips(); applyFilters();
     if(currentTab==='dep')    renderDepuradas();
     if(currentTab==='no-des') renderNoDeseadas();
@@ -2425,7 +2424,7 @@ var _os=saveState; saveState=function(){_os();_fbSave();};
 var _ob=saveBanned; saveBanned=function(arr){_ob(arr);_fbSave();};
 var _of=saveFavs; saveFavs=function(arr){_of(arr);_fbSave();};
 var _ot=saveTomidasMap; saveTomidasMap=function(map){_ot(map);_fbSave();};
-var _osel=saveSelected; saveSelected=function(){_osel();_fbSave();};
+// saveSelected NO se sincroniza — la selección de fila es local de cada usuario
 
 resetAll=function(){
   var pwd=prompt('Ingrese contraseña para restablecer:');
