@@ -609,9 +609,23 @@
     <div class="badge-depurados">
       <span id="badge-count">0</span> adjudicadas<br><span id="badge-time" style="font-size: 26px; opacity: 0.9;">—</span>
     </div>
-    <div class="sync-badge spin" id="sync-badge">
-      <span id="sync-icon">⟳</span>
-      <span id="sync-status">Conectando...</span>
+    <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap">
+      <div class="sync-badge" id="sync-badge">
+        <span id="sync-status">💾 Sin sesión</span>
+      </div>
+      <!-- Botón iniciar sesión (visible cuando NO está autenticado) -->
+      <button id="btn-sign-in" onclick="_signInGoogle()"
+        style="background:white;color:#444;border:none;border-radius:8px;padding:6px 12px;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 1px 6px rgba(0,0,0,0.3);white-space:nowrap">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:16px;height:16px">
+        Iniciar con Google
+      </button>
+      <!-- Info usuario (visible cuando SÍ está autenticado) -->
+      <div id="user-area" style="display:none;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)">
+        <img id="user-photo" src="" style="width:22px;height:22px;border-radius:50%;display:none">
+        <span id="user-name" style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+        <button onclick="_signOut()" title="Cerrar sesión"
+          style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:'Sora',sans-serif">Salir</button>
+      </div>
     </div>
   </div>
 </div>
@@ -619,7 +633,12 @@
 <div id="loading-overlay">
   <div class="loading-logo">S</div>
   <div class="loading-spinner"></div>
-  <div class="loading-text">Conectando a la nube...</div>
+  <div class="loading-text" id="loading-text">Iniciando...</div>
+  <button id="btn-sign-in-overlay" onclick="_signInGoogle()"
+    style="display:none;background:white;color:#444;border:none;border-radius:10px;padding:10px 20px;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;align-items:center;gap:8px;margin-top:8px;box-shadow:0 2px 12px rgba(0,0,0,0.3)">
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:18px;height:18px;vertical-align:middle;margin-right:4px">
+    Continuar con Google
+  </button>
 </div>
 
 <div class="tabs">
@@ -2337,7 +2356,9 @@ document.getElementById('btn-no-deseada-tipo')?.addEventListener('click', functi
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  FIREBASE V2 — Sincronización en la nube (anónima por usuario)
+//  FIREBASE V2 — Sincronización con Google Sign-in
+//  Cada usuario inicia sesión con Google y sus datos se guardan
+//  en Firestore bajo su UID → accesible desde cualquier dispositivo
 // ═══════════════════════════════════════════════════════════════
 
 const _FB_CONFIG = {
@@ -2355,26 +2376,64 @@ const _fbDb   = firebase.firestore();
 let _fbUser   = null;
 let _fbReady  = false;
 let _saveTimer = null;
+const _googleProvider = new firebase.auth.GoogleAuthProvider();
+
+// ── Iniciar sesión con Google ──
+function _signInGoogle() {
+  _fbAuth.signInWithPopup(_googleProvider).catch(function(err) {
+    console.error('[FB] Error sign-in:', err);
+    if (err.code !== 'auth/popup-closed-by-user') {
+      alert('Error al iniciar sesión: ' + err.message);
+    }
+  });
+}
+
+// ── Cerrar sesión ──
+function _signOut() {
+  if (!confirm('¿Cerrar sesión? Tus cambios están guardados en la nube.')) return;
+  _fbAuth.signOut().then(function() {
+    _fbUser = null;
+    _fbReady = false;
+    _syncUI('offline');
+  });
+}
 
 // ── Sync status indicator ──
 function _syncUI(state) {
-  const badge  = document.getElementById('sync-badge');
-  const icon   = document.getElementById('sync-icon');
-  const status = document.getElementById('sync-status');
+  const badge    = document.getElementById('sync-badge');
+  const status   = document.getElementById('sync-status');
+  const signInBtn = document.getElementById('btn-sign-in');
+  const overlayBtn = document.getElementById('btn-sign-in-overlay');
+  const userArea = document.getElementById('user-area');
+  const userName = document.getElementById('user-name');
+  const userPhoto= document.getElementById('user-photo');
   if (!badge || !status) return;
+
   badge.className = 'sync-badge';
   const map = {
-    connecting: { cls:'spin',  icon:'⟳', text:'Conectando...' },
-    loading:    { cls:'spin',  icon:'⟳', text:'Cargando datos...' },
-    saving:     { cls:'spin',  icon:'↑', text:'Guardando...' },
-    ok:         { cls:'ok',   icon:'☁', text:'Nube ✓' },
-    offline:    { cls:'',     icon:'💾', text:'Modo local' },
-    error:      { cls:'error',icon:'⚠', text:'Error sync' }
+    loading:  { cls:'spin', text:'⟳ Cargando...' },
+    saving:   { cls:'spin', text:'↑ Guardando...' },
+    ok:       { cls:'ok',  text:'☁ Nube ✓' },
+    offline:  { cls:'',    text:'💾 Sin sesión' },
+    error:    { cls:'error',text:'⚠ Error sync' }
   };
   const s = map[state] || map.offline;
   badge.classList.add(s.cls);
-  if (icon) icon.textContent = s.icon;
   status.textContent = s.text;
+
+  const loggedIn = (state !== 'offline');
+  if (signInBtn)  signInBtn.style.display  = loggedIn ? 'none' : 'flex';
+  if (userArea)   userArea.style.display   = loggedIn ? 'flex' : 'none';
+  if (overlayBtn) overlayBtn.style.display = 'none';
+
+  if (loggedIn && _fbUser && userName) {
+    const name = _fbUser.displayName || _fbUser.email || 'Usuario';
+    userName.textContent = '👤 ' + name;
+    if (userPhoto && _fbUser.photoURL) {
+      userPhoto.src = _fbUser.photoURL;
+      userPhoto.style.display = 'block';
+    }
+  }
 }
 
 // ── Comprimir estado para Firestore ──
@@ -2521,13 +2580,17 @@ resetAll = function() {
   location.reload();
 };
 
-// ── Autenticación anónima y carga inicial ──
-_syncUI('connecting');
+// ── Google Sign-in → carga datos de Firestore ──
+_syncUI('offline');
 
 _fbAuth.onAuthStateChanged(function(user) {
   if (user) {
+    // Usuario autenticado con Google
     _fbUser = user;
     _syncUI('loading');
+    document.getElementById('loading-overlay').classList.remove('hidden');
+    var loadingText = document.getElementById('loading-text');
+    if (loadingText) loadingText.textContent = 'Cargando tus datos...';
 
     _fbDb.collection('users').doc(user.uid).get()
       .then(function(doc) {
@@ -2545,11 +2608,32 @@ _fbAuth.onAuthStateChanged(function(user) {
         document.getElementById('loading-overlay').classList.add('hidden');
       });
   } else {
-    _fbAuth.signInAnonymously().catch(function(err) {
-      console.error('[FB] Error al autenticar:', err);
-      _syncUI('offline');
-      document.getElementById('loading-overlay').classList.add('hidden');
-    });
+    // No hay sesión → mostrar botón de inicio de sesión en el overlay
+    _fbReady = false;
+    _syncUI('offline');
+    var loadingText = document.getElementById('loading-text');
+    if (loadingText) loadingText.textContent = 'Inicia sesión para sincronizar tus datos en la nube';
+    var overlayBtn = document.getElementById('btn-sign-in-overlay');
+    if (overlayBtn) overlayBtn.style.display = 'flex';
+    // Mostrar overlay con botón de login
+    document.getElementById('loading-overlay').classList.remove('hidden');
+    // Permitir usar la app en modo local (sin nube) después de 2s
+    setTimeout(function() {
+      var overlay = document.getElementById('loading-overlay');
+      if (overlay && !_fbUser) {
+        // Agregar enlace "Continuar sin sesión"
+        if (!document.getElementById('btn-skip-login')) {
+          var skipBtn = document.createElement('button');
+          skipBtn.id = 'btn-skip-login';
+          skipBtn.textContent = 'Continuar sin iniciar sesión (solo local)';
+          skipBtn.style.cssText = 'background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:\'Sora\',sans-serif;margin-top:4px;text-decoration:underline';
+          skipBtn.onclick = function() {
+            document.getElementById('loading-overlay').classList.add('hidden');
+          };
+          overlay.appendChild(skipBtn);
+        }
+      }
+    }, 1500);
   }
 });
 </script>
