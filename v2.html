@@ -2342,6 +2342,9 @@ try { firebase.initializeApp({
 }); } catch(e){ console.warn('[FB] Init:',e); }
 
 var _fbAuth=null,_fbDb=null,_fbUser=null,_fbReady=false,_saveTimer=null;
+// ID único de esta pestaña/dispositivo — se usa para ignorar nuestras propias escrituras en onSnapshot
+var _DEVICE_ID='dev_'+Date.now()+'_'+Math.random().toString(36).substr(2,6);
+var _unsubSnapshot=null; // referencia al listener de Firestore (para desuscribirse al cerrar sesión)
 try { _fbAuth=firebase.auth(); _fbDb=firebase.firestore(); } catch(e){ console.warn('[FB] SDK:',e); }
 
 function _syncUI(state){
@@ -2375,7 +2378,8 @@ function _fbSave(){
       dep:depuradas.map(function(d){return{id:d._rowId,m:d._motivo||'',t:d._timestamp||0,dt:d._depTime||'',tp:d._tipo||'depurada',pt:d._isPartial?1:0};}),
       nd:no_deseadas.map(function(d){return{id:d._rowId,m:d._motivo||'',t:d._timestamp||0,pt:d._isPartial?1:0};}),
       fv:getFavs(),bn:getBanned(),tm:getTomidasMap(),sl:Array.from(selectedSet),
-      ua:firebase.firestore.FieldValue.serverTimestamp()
+      ua:firebase.firestore.FieldValue.serverTimestamp(),
+      dev:_DEVICE_ID  // identifica qué dispositivo guardó — permite ignorarlo en onSnapshot
     };
     _fbDb.collection('users').doc(_fbUser.uid).set(data)
       .then(function(){_syncUI('ok');})
@@ -2440,14 +2444,32 @@ if(_fbAuth){
     clearTimeout(_fbTimeout);
     if(user){
       _fbUser=user; _syncUI('loading');
-      _fbDb.collection('users').doc(user.uid).get()
-        .then(function(doc){
-          if(doc.exists)_fbLoad(doc.data());
-          _fbReady=true; _syncUI('ok');
-        })
-        .catch(function(e){console.error('[FB] Load:',e);_fbReady=true;_syncUI('error');});
+      // Cancelar listener anterior si existía
+      if(_unsubSnapshot){ _unsubSnapshot(); _unsubSnapshot=null; }
+      // onSnapshot = escucha en TIEMPO REAL: se dispara al cargar Y cada vez que cambia en Firestore
+      _unsubSnapshot = _fbDb.collection('users').doc(user.uid).onSnapshot(
+        function(doc){
+          if(!_fbReady){
+            // Primera carga: cargar siempre
+            if(doc.exists) _fbLoad(doc.data());
+            _fbReady=true; _syncUI('ok');
+          } else {
+            // Actualización posterior: ignorar si vino de este mismo dispositivo
+            var d=doc.data();
+            if(d && d.dev===_DEVICE_ID){
+              _syncUI('ok'); // fue nuestro propio guardado confirmado
+              return;
+            }
+            // Vino de OTRO dispositivo → actualizar la vista
+            if(doc.exists){ _fbLoad(d); _syncUI('ok'); }
+          }
+        },
+        function(e){ console.error('[FB] Snapshot:',e); _fbReady=true; _syncUI('error'); }
+      );
     } else {
-      _fbReady=false; _fbUser=null; _syncUI('offline');
+      _fbReady=false; _fbUser=null;
+      if(_unsubSnapshot){ _unsubSnapshot(); _unsubSnapshot=null; }
+      _syncUI('offline');
     }
   });
 } else {
