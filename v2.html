@@ -659,16 +659,16 @@
       <option>SANIDAD DE LA MARINA DE GUERRA DEL PERU</option>
       <option>SANIDAD DE LA FUERZA AEREA DEL PERU</option>
     </select>
-    <select id="f-pres" onchange="applyFilters()">
-      <option value="">— Presupuesto —</option>
-      <option>REGIONAL</option><option>NACIONAL</option><option>ESSALUD</option>
-      <option>PNP</option><option>EP</option><option>MGP</option><option>FAP</option>
-    </select>
     <select id="f-provincia" onchange="onProvinciaChange()">
       <option value="">— Provincia —</option>
     </select>
     <select id="f-distrito" onchange="applyFilters()">
       <option value="">— Distrito —</option>
+    </select>
+    <select id="f-pres" onchange="applyFilters()">
+      <option value="">— Presupuesto —</option>
+      <option>REGIONAL</option><option>NACIONAL</option><option>ESSALUD</option>
+      <option>PNP</option><option>EP</option><option>MGP</option><option>FAP</option>
     </select>
     <select id="f-gd" onchange="applyFilters()">
       <option value="">— Dificultad —</option>
@@ -715,12 +715,12 @@
         <tr>
           <th style="text-align:center">⭐</th>
           <th onclick="sortBy('NUM')">#</th>
-          <th class="col-geo" onclick="sortBy('DEPARTAMENTO')">Departamento</th>
+          <th class="col-geo" onclick="sortBy('DEPARTAMENTO')">Región</th>
           <th class="col-geo" onclick="sortBy('INSTITUCION')">Institución</th>
           <th class="col-geo" onclick="sortBy('PROVINCIA')">Provincia</th>
           <th class="col-geo" onclick="sortBy('DISTRITO')">Distrito</th>
           <th class="col-geo" onclick="sortBy('NOMBRE DE ESTABLECIMIENTO')">Establecimiento</th>
-          <th class="col-geo" onclick="sortBy('INSTITUCIÓN')">Ofertante</th>
+          <th class="col-geo" onclick="sortBy('PRESUPUESTO')">Presupuesto</th>
           <th onclick="sortBy('N° PLAZAS')" title="Plazas disponibles / tomadas">Plazas</th>
           <th onclick="sortBy('DIRESA')">DIRESA</th>
           <th onclick="sortBy('GRADO DE DIFICULTAD')">Dificultad</th>
@@ -752,9 +752,9 @@
     <input type="text" id="search-dep" placeholder="🔍 Buscar..." oninput="renderDepuradas()">
     <select id="f-dep-depto" onchange="onDepDeptoChange()"><option value="">— Departamento —</option><option>AMAZONAS</option><option>ANCASH</option><option>APURIMAC</option><option>AREQUIPA</option><option>AYACUCHO</option><option>CAJAMARCA</option><option>CALLAO</option><option>CUSCO</option><option>HUANCAVELICA</option><option>HUANUCO</option><option>ICA</option><option>JUNIN</option><option>LA LIBERTAD</option><option>LAMBAYEQUE</option><option>LIMA</option><option>LORETO</option><option>MADRE DE DIOS</option><option>MOQUEGUA</option><option>PASCO</option><option>PIURA</option><option>PUNO</option><option>SAN MARTIN</option><option>TACNA</option><option>TUMBES</option><option>UCAYALI</option></select>
     <select id="f-dep-inst" onchange="renderDepuradas()"><option value="">— Institución —</option><option>GOBIERNO REGIONAL</option><option>ESSALUD</option><option>MINSA</option><option>SANIDAD DE LA POLICIA NACIONAL DEL PERU</option><option>SANIDAD DEL EJERCITO DEL PERU</option><option>SANIDAD DE LA MARINA DE GUERRA DEL PERU</option><option>SANIDAD DE LA FUERZA AEREA DEL PERU</option></select>
-    <select id="f-dep-pres" onchange="renderDepuradas()"><option value="">— Presupuesto —</option><option>REGIONAL</option><option>NACIONAL</option><option>ESSALUD</option><option>PNP</option><option>EP</option><option>MGP</option><option>FAP</option></select>
     <select id="f-dep-prov" onchange="onDepProvChange()"><option value="">— Provincia —</option></select>
     <select id="f-dep-dist" onchange="renderDepuradas()"><option value="">— Distrito —</option></select>
+    <select id="f-dep-pres" onchange="renderDepuradas()"><option value="">— Presupuesto —</option><option>REGIONAL</option><option>NACIONAL</option><option>ESSALUD</option><option>PNP</option><option>EP</option><option>MGP</option><option>FAP</option></select>
     <select id="f-dep-gd" onchange="renderDepuradas()"><option value="">— Dificultad —</option><option>GD-1</option><option>GD-2</option><option>GD-3</option><option>GD-4</option><option>GD-5</option></select>
     <select id="f-dep-cat" onchange="renderDepuradas()"><option value="">— Categoría —</option><option>I-1</option><option>I-2</option><option>I-3</option><option>I-4</option></select>
     <select id="f-dep-zaf" onchange="renderDepuradas()"><option value="">— ZAF —</option><option value="SI">ZAF: Sí</option><option value="NO">ZAF: No</option></select>
@@ -769,12 +769,12 @@
         <tr>
           <th style="color:#ffc107">ORD. ADJ.</th>
           <th>#</th>
-          <th>Departamento</th>
+          <th>Región</th>
           <th>Institución</th>
           <th>Provincia</th>
           <th>Distrito</th>
           <th>Establecimiento</th>
-          <th>Ofertante</th>
+          <th>Presupuesto</th>
           <th>Plazas</th>
           <th>DIRESA</th>
           <th>Dificultad</th>
@@ -782,7 +782,6 @@
           <th>Cat.</th>
           <th>ZAF</th>
           <th>ZE</th>
-          <th>Presupuesto</th>
           <th>Médico adjudicado</th>
           <th>Motivo adjudicación</th>
           <th>Hora</th>
@@ -805,9 +804,9 @@
     <input type="text" id="search-no-des" placeholder="🔍 Buscar..." oninput="renderNoDeseadas()">
     <select id="f-nd-depto" onchange="onNdDeptoChange()"><option value="">— Departamento —</option><option>AMAZONAS</option><option>ANCASH</option><option>APURIMAC</option><option>AREQUIPA</option><option>AYACUCHO</option><option>CAJAMARCA</option><option>CALLAO</option><option>CUSCO</option><option>HUANCAVELICA</option><option>HUANUCO</option><option>ICA</option><option>JUNIN</option><option>LA LIBERTAD</option><option>LAMBAYEQUE</option><option>LIMA</option><option>LORETO</option><option>MADRE DE DIOS</option><option>MOQUEGUA</option><option>PASCO</option><option>PIURA</option><option>PUNO</option><option>SAN MARTIN</option><option>TACNA</option><option>TUMBES</option><option>UCAYALI</option></select>
     <select id="f-nd-inst" onchange="renderNoDeseadas()"><option value="">— Institución —</option><option>GOBIERNO REGIONAL</option><option>ESSALUD</option><option>MINSA</option><option>SANIDAD DE LA POLICIA NACIONAL DEL PERU</option><option>SANIDAD DEL EJERCITO DEL PERU</option><option>SANIDAD DE LA MARINA DE GUERRA DEL PERU</option><option>SANIDAD DE LA FUERZA AEREA DEL PERU</option></select>
-    <select id="f-nd-pres" onchange="renderNoDeseadas()"><option value="">— Presupuesto —</option><option>REGIONAL</option><option>NACIONAL</option><option>ESSALUD</option><option>PNP</option><option>EP</option><option>MGP</option><option>FAP</option></select>
     <select id="f-nd-prov" onchange="onNdProvChange()"><option value="">— Provincia —</option></select>
     <select id="f-nd-dist" onchange="renderNoDeseadas()"><option value="">— Distrito —</option></select>
+    <select id="f-nd-pres" onchange="renderNoDeseadas()"><option value="">— Presupuesto —</option><option>REGIONAL</option><option>NACIONAL</option><option>ESSALUD</option><option>PNP</option><option>EP</option><option>MGP</option><option>FAP</option></select>
     <select id="f-nd-gd" onchange="renderNoDeseadas()"><option value="">— Dificultad —</option><option>GD-1</option><option>GD-2</option><option>GD-3</option><option>GD-4</option><option>GD-5</option></select>
     <select id="f-nd-cat" onchange="renderNoDeseadas()"><option value="">— Categoría —</option><option>I-1</option><option>I-2</option><option>I-3</option><option>I-4</option></select>
     <select id="f-nd-zaf" onchange="renderNoDeseadas()"><option value="">— ZAF —</option><option value="SI">ZAF: Sí</option><option value="NO">ZAF: No</option></select>
@@ -819,12 +818,12 @@
       <thead>
         <tr>
           <th>#</th>
-          <th>Departamento</th>
+          <th>Región</th>
           <th>Institución</th>
           <th>Provincia</th>
           <th>Distrito</th>
           <th>Establecimiento</th>
-          <th>Ofertante</th>
+          <th>Presupuesto</th>
           <th>Plazas</th>
           <th>DIRESA</th>
           <th>Dificultad</th>
@@ -1067,7 +1066,7 @@ function renderBannedChips() {
 
 // COLUMNAS
 const COLUMNS_KEY = 'serums_visible_columns';
-const COLUMN_NAMES = ['⭐','#','Departamento','Tipo Inst.','Provincia','Distrito','Establecimiento','Ofertante','Plazas','DIRESA','Dificultad','RENIPRESS','Cat.','ZAF','ZE','Médico'];
+const COLUMN_NAMES = ['⭐','#','Región','Tipo Inst.','Provincia','Distrito','Establecimiento','Presupuesto','Plazas','DIRESA','Dificultad','RENIPRESS','Cat.','ZAF','ZE','Médico'];
 const COLUMN_INDICES = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
 const ALWAYS_VISIBLE = [16]; // Columna de Acción (DEPURAR) siempre visible
 
@@ -1620,7 +1619,7 @@ function buildRow(r) {
       <td style="font-size:10px;color:var(--muted)">${r['PROVINCIA']||'—'}</td>
       <td style="font-size:10px;color:var(--muted)">${r['DISTRITO']||'—'}</td>
       <td style="max-width:180px;white-space:normal;line-height:1.3;font-size:11px;font-weight:500">${r['NOMBRE DE ESTABLECIMIENTO']||'—'}</td>
-      <td style="font-size:10px;color:var(--muted)">${r['INSTITUCIÓN']||'—'}</td>
+      <td style="font-size:10px;color:var(--muted)">${r['PRESUPUESTO']||'—'}</td>
       <td style="text-align:center">${plazaCounter}</td>
       <td style="font-size:10px;color:var(--muted)">${r['DIRESA']||'—'}</td>
       <td><span class="pill ${gdClass(gd)}">${gd||'—'}</span></td>
@@ -1741,7 +1740,7 @@ function renderDepuradas() {
       <td style="font-size:10px;color:var(--muted)">${r['PROVINCIA']||'—'}</td>
       <td style="font-size:10px;color:var(--muted)">${r['DISTRITO']||'—'}</td>
       <td style="max-width:160px;white-space:normal;line-height:1.3;font-size:11px;font-weight:500">${r['NOMBRE DE ESTABLECIMIENTO']||'—'}</td>
-      <td style="font-size:10px;color:var(--muted)">${r['INSTITUCIÓN']||'—'}</td>
+      <td style="font-size:10px;color:var(--muted)">${r['PRESUPUESTO']||'—'}</td>
       <td class="num">${r['N° PLAZAS']||'1'}</td>
       <td style="font-size:10px;color:var(--muted)">${r['DIRESA']||'—'}</td>
       <td><span class="pill ${gdClass(gd)}">${gd||'—'}</span></td>
@@ -1749,7 +1748,6 @@ function renderDepuradas() {
       <td><span class="pill pill-cat">${r['CATEGORIA']||'—'}</span></td>
       <td>${zaf ? '<span class="pill pill-zaf">ZAF</span>' : '<span style="color:var(--muted);font-size:10px">—</span>'}</td>
       <td>${ze  ? '<span class="pill pill-ze">ZE</span>'   : '<span style="color:var(--muted);font-size:10px">—</span>'}</td>
-      <td style="font-size:10px;color:var(--muted)">${r['PRESUPUESTO']||'—'}</td>
       <td style="max-width:160px;white-space:normal;line-height:1.3;font-size:10px;color:var(--accent)">${r['MEDICO']||'—'}</td>
       <td class="dep-reason"><input type="text" value="${r._motivo||''}" placeholder="ej. ocupada, lejos..." onchange="updateMotivo(${r._rowId}, this.value)"></td>
       <td class="timestamp">${r._depTime||''}</td>
@@ -1827,12 +1825,12 @@ function renderStats() {
         <canvas id="chart-gd" style="max-height:300px"></canvas>
       </div>
 
-      <h3 style="color:var(--accent);margin-top:40px;margin-bottom:15px">📋 Estadísticas Detalladas por Departamento</h3>
+      <h3 style="color:var(--accent);margin-top:40px;margin-bottom:15px">📋 Estadísticas Detalladas por Región</h3>
       <div style="overflow-x:auto;margin-bottom:30px;">
         <table style="width:100%;border-collapse:collapse;">
           <thead style="background:var(--surface2);">
             <tr>
-              <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border);">Departamento</th>
+              <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border);">Región</th>
               <th style="text-align:center;padding:10px;border-bottom:1px solid var(--border);">Total</th>
               <th style="text-align:center;padding:10px;border-bottom:1px solid var(--border);">Adjudicadas</th>
               <th style="text-align:center;padding:10px;border-bottom:1px solid var(--border);">Faltante</th>
@@ -2037,12 +2035,12 @@ function initTheme() {
 function exportToExcel() {
   const wb = XLSX.utils.book_new();
   const rows = depuradas.map(r => ({
-    'DEPARTAMENTO': r['DEPARTAMENTO'] || '—',
+    'REGIÓN': r['DEPARTAMENTO'] || '—',
     'INSTITUCIÓN': r['INSTITUCION'] || '—',
     'PROVINCIA': r['PROVINCIA'] || '—',
     'DISTRITO': r['DISTRITO'] || '—',
     'ESTABLECIMIENTO': r['NOMBRE DE ESTABLECIMIENTO'] || '—',
-    'OFERTANTE': r['INSTITUCIÓN'] || '—',
+    'PRESUPUESTO': r['PRESUPUESTO'] || '—',
     'PLAZAS': r['N° PLAZAS'] || '1',
     'DIRESA': r['DIRESA'] || '—',
     'DIFICULTAD': r['GRADO DE DIFICULTAD'] || '—',
@@ -2089,7 +2087,7 @@ function exportToPDF() {
     doc.setFontSize(6);
     doc.setFont(undefined, 'bold');
 
-    const headers = ['DEPTO', 'INSTITUCIÓN', 'PROVINCIA', 'DISTRITO', 'ESTAB.', 'OFERTANTE', 'PL.', 'DIRESA', 'DIF.', 'RENIPRESS', 'CAT', 'ZAF', 'ZE', 'MÉDICO', 'MOTIVO', 'HORA'];
+    const headers = ['REGIÓN', 'INSTITUCIÓN', 'PROVINCIA', 'DISTRITO', 'ESTAB.', 'PRESUPUESTO', 'PL.', 'DIRESA', 'DIF.', 'RENIPRESS', 'CAT', 'ZAF', 'ZE', 'MÉDICO', 'MOTIVO', 'HORA'];
     const colWidths = [15, 16, 13, 13, 20, 16, 6, 10, 8, 10, 6, 6, 6, 16, 18, 13];
     let xPos = 10;
 
@@ -2118,7 +2116,7 @@ function exportToPDF() {
         r['PROVINCIA']?.substring(0, 7) || '—',
         r['DISTRITO']?.substring(0, 7) || '—',
         r['NOMBRE DE ESTABLECIMIENTO']?.substring(0, 10) || '—',
-        r['INSTITUCIÓN']?.substring(0, 8) || '—',
+        r['PRESUPUESTO']?.substring(0, 8) || '—',
         r['N° PLAZAS'] || '1',
         r['DIRESA']?.substring(0, 6) || '—',
         r['GRADO DE DIFICULTAD']?.substring(0, 4) || '—',
@@ -2227,7 +2225,7 @@ function renderNoDeseadas() {
       <td style="font-size:10px;color:var(--muted)">${r['PROVINCIA']||'—'}</td>
       <td style="font-size:10px;color:var(--muted)">${r['DISTRITO']||'—'}</td>
       <td style="max-width:160px;white-space:normal;line-height:1.3;font-size:11px;font-weight:500">${r['NOMBRE DE ESTABLECIMIENTO']||'—'}</td>
-      <td style="font-size:10px;color:var(--muted)">${r['INSTITUCIÓN']||'—'}</td>
+      <td style="font-size:10px;color:var(--muted)">${r['PRESUPUESTO']||'—'}</td>
       <td class="num">${r['N° PLAZAS']||'1'}</td>
       <td style="font-size:10px;color:var(--muted)">${r['DIRESA']||'—'}</td>
       <td><span class="pill ${gdClass(gd)}">${gd||'—'}</span></td>
