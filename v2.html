@@ -625,6 +625,9 @@
     📊 Estadísticas
     <span class="tab-count" id="count-stats">—</span>
   </button>
+  <button class="tab-btn" id="tab-mapa" onclick="switchTab('mapa')">
+    🗺️ Mapa
+  </button>
   <button class="btn-clear" id="btn-fav-filter" onclick="toggleFavFilter()" style="margin-left:auto;">⭐ Favoritos <span id="fav-count-badge" style="background:var(--accent);color:#000;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:3px;display:none">0</span></button>
   <button class="btn-clear btn-ban-open" id="btn-ban-open" onclick="toggleBanPanel()">🚫 Banear dept.</button>
   <button class="btn-clear" id="btn-theme" onclick="toggleTheme()" title="Cambiar tema">🌙 Tema</button>
@@ -798,6 +801,29 @@
   <div style="padding: 28px;">
     <div id="stats-content"></div>
   </div>
+</div>
+
+<!-- TAB 5: MAPA -->
+<div class="panel" id="panel-mapa">
+  <div style="padding:20px 28px">
+    <div id="mapa-summary" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:22px"></div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:0 0 auto;position:relative">
+        <svg id="peru-map-svg" viewBox="0 0 460 560" style="width:min(420px,calc(100vw - 60px));display:block;border-radius:10px;background:var(--surface2)"></svg>
+      </div>
+      <div style="flex:1;min-width:220px;max-height:560px;overflow-y:auto;padding-right:4px" id="mapa-stats-list"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.05em">DISPONIBILIDAD:</span>
+      <div style="display:flex;gap:5px;align-items:center"><div style="width:13px;height:13px;border-radius:2px;background:#2ed573"></div><span style="font-size:10px;color:var(--muted)">100%</span></div>
+      <div style="display:flex;gap:5px;align-items:center"><div style="width:13px;height:13px;border-radius:2px;background:#a8e063"></div><span style="font-size:10px;color:var(--muted)">75%</span></div>
+      <div style="display:flex;gap:5px;align-items:center"><div style="width:13px;height:13px;border-radius:2px;background:#ffc107"></div><span style="font-size:10px;color:var(--muted)">50%</span></div>
+      <div style="display:flex;gap:5px;align-items:center"><div style="width:13px;height:13px;border-radius:2px;background:#ff6b35"></div><span style="font-size:10px;color:var(--muted)">25%</span></div>
+      <div style="display:flex;gap:5px;align-items:center"><div style="width:13px;height:13px;border-radius:2px;background:#ff4757"></div><span style="font-size:10px;color:var(--muted)">0%</span></div>
+      <div style="display:flex;gap:5px;align-items:center"><div style="width:13px;height:13px;border-radius:2px;background:#3a4555;border:1px solid var(--border)"></div><span style="font-size:10px;color:var(--muted)">Sin datos</span></div>
+    </div>
+  </div>
+  <div id="map-tooltip" style="display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-family:'Sora',sans-serif;font-size:12px;z-index:9999;pointer-events:none;box-shadow:0 6px 24px rgba(0,0,0,.55);min-width:170px"></div>
 </div>
 
 <div class="status-bar">
@@ -1232,6 +1258,7 @@ function switchTab(tab) {
   document.getElementById('panel-' + tab).classList.add('active');
   if (tab === 'dep') renderDepuradas();
   else if (tab === 'stats') renderStats();
+  else if (tab === 'mapa') renderMapa();
   else applyFilters();
 }
 
@@ -2148,6 +2175,199 @@ function depurarDesdeNoDeseada(rowId) {
     applyFilters();
   });
 }
+
+
+// ═══════════════════════════════════════════
+//  TAB MAPA
+// ═══════════════════════════════════════════
+var _mapGeoCache = null;
+
+function _mapaStats() {
+  var depts = {};
+  RAW.forEach(function(r) {
+    var d = r['DEPARTAMENTO']; if (!d) return;
+    if (!depts[d]) depts[d] = {total:0, adj:0};
+    depts[d].total += parseInt(r['N° PLAZAS']) || 1;
+  });
+  depuradas.forEach(function(r) {
+    var d = r['DEPARTAMENTO'];
+    if (d && depts[d]) depts[d].adj += parseInt(r['N° PLAZAS']) || 1;
+  });
+  return depts;
+}
+
+function _mapaColor(s) {
+  if (!s || s.total === 0) return '#3a4555';
+  var p = s.adj / s.total;
+  if (p >= 1)    return '#ff4757';
+  if (p >= 0.75) return '#ff6b35';
+  if (p >= 0.5)  return '#ffc107';
+  if (p >= 0.25) return '#a8e063';
+  return '#2ed573';
+}
+
+function _mapaNorm(n) {
+  var s = (n || '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  if (s.indexOf('CALLAO') !== -1) return 'CALLAO';
+  return s.trim();
+}
+
+function renderMapa() {
+  var svg       = document.getElementById('peru-map-svg');
+  var listEl    = document.getElementById('mapa-stats-list');
+  var summaryEl = document.getElementById('mapa-summary');
+  if (!svg) return;
+
+  var depts = _mapaStats();
+  var totalAll = 0, adjAll = 0;
+  Object.values(depts).forEach(function(v){ totalAll += v.total; adjAll += v.adj; });
+  var dispAll = totalAll - adjAll;
+
+  // Tarjetas resumen
+  if (summaryEl) summaryEl.innerHTML = [
+    ['🏥 Total plazas',  totalAll, '#00d4ff'],
+    ['✅ Disponibles',         dispAll,  '#2ed573'],
+    ['📌 Adjudicadas',   adjAll,   '#ffc107']
+  ].map(function(x) {
+    return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 20px;text-align:center;min-width:110px">'
+      + '<div style="font-size:26px;font-weight:700;color:' + x[2] + ';font-family:\'IBM Plex Mono\',monospace">' + x[1] + '</div>'
+      + '<div style="font-size:11px;color:var(--muted);margin-top:3px">' + x[0] + '</div>'
+      + '</div>';
+  }).join('');
+
+  // Lista lateral
+  if (listEl) {
+    var sorted = Object.entries(depts).sort(function(a,b){ return b[1].total - a[1].total; });
+    listEl.innerHTML = '<div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.06em;padding:0 4px 8px;border-bottom:1px solid var(--border);margin-bottom:4px">DEPARTAMENTO &nbsp;&middot;&nbsp; TOT &nbsp;&middot;&nbsp; DISP &nbsp;&middot;&nbsp; ADJ</div>'
+      + sorted.map(function(entry) {
+        var dept = entry[0], s = entry[1];
+        var avail = Math.max(0, s.total - s.adj);
+        var pct   = s.total > 0 ? Math.round(s.adj / s.total * 100) : 0;
+        var col   = _mapaColor(s);
+        return '<div style="padding:6px 4px;border-bottom:1px solid rgba(58,69,85,.5)">'
+          + '<div style="display:flex;align-items:center;gap:7px">'
+          + '<div style="width:9px;height:9px;border-radius:2px;background:' + col + ';flex-shrink:0"></div>'
+          + '<span style="font-size:11px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + dept + '</span>'
+          + '<span style="font-size:10px;color:var(--muted)"><strong style="color:var(--text)">' + s.total + '</strong></span>'
+          + '<span style="font-size:10px;color:#2ed573"><strong>' + avail + '</strong></span>'
+          + '<span style="font-size:10px;color:#ffc107"><strong>' + s.adj + '</strong></span>'
+          + '</div>'
+          + '<div style="height:3px;background:var(--border);border-radius:2px;margin-top:5px">'
+          + '<div style="height:3px;width:' + pct + '%;background:' + col + ';border-radius:2px"></div>'
+          + '</div></div>';
+      }).join('');
+  }
+
+  // Mapa SVG
+  if (!window.d3) {
+    svg.innerHTML = '<text x="230" y="280" text-anchor="middle" fill="#64748b" font-size="13" font-family="sans-serif">Cargando mapa...</text>';
+    var sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+    sc.onload  = function(){ _fetchAndDrawMap(svg, depts); };
+    sc.onerror = function(){ svg.innerHTML = '<text x="230" y="280" text-anchor="middle" fill="#64748b" font-size="12" font-family="sans-serif">D3 no disponible</text>'; };
+    document.head.appendChild(sc);
+  } else {
+    _fetchAndDrawMap(svg, depts);
+  }
+}
+
+function _fetchAndDrawMap(svgEl, depts) {
+  function draw(geo) {
+    _mapGeoCache = geo;
+    var W = 460, H = 560;
+    var proj = d3.geoMercator().fitSize([W - 8, H - 8], geo);
+    var path = d3.geoPath().projection(proj);
+    var tip  = document.getElementById('map-tooltip');
+
+    var root = d3.select(svgEl);
+    root.selectAll('*').remove();
+    root.attr('viewBox', '0 0 ' + W + ' ' + H);
+
+    var ABBR = {
+      'HUANCAVELICA':'HVCA','MADRE DE DIOS':'MDD','LA LIBERTAD':'LA LIB',
+      'LAMBAYEQUE':'LAMB','APURIMAC':'APURM','AMAZONAS':'AMAZ',
+      'SAN MARTIN':'S.MAR','UCAYALI':'UCAY','HUANUCO':'HNCO'
+    };
+
+    function getName(d) {
+      return _mapaNorm(d.properties.NOMBDEP || d.properties.DEPARTAMEN || d.properties.name || d.properties.NAME_1 || '');
+    }
+
+    // Paths
+    root.selectAll('path')
+      .data(geo.features)
+      .enter().append('path')
+      .attr('d', path)
+      .attr('fill', function(d){ return _mapaColor(depts[getName(d)]); })
+      .attr('stroke', '#1a1f2e')
+      .attr('stroke-width', 0.6)
+      .style('cursor', 'pointer')
+      .on('mouseover', function(event, d) {
+        var name = getName(d);
+        var s = depts[name] || {total:0, adj:0};
+        var avail = Math.max(0, s.total - s.adj);
+        d3.select(this).attr('stroke', '#fff').attr('stroke-width', 2);
+        if (tip) {
+          tip.style.display = 'block';
+          tip.innerHTML = '<div style="font-weight:700;font-size:13px;color:#00d4ff;margin-bottom:8px">' + name + '</div>'
+            + '<div style="margin:4px 0">🏥 Total: <strong>' + s.total + '</strong></div>'
+            + '<div style="margin:4px 0;color:#2ed573">✅ Disponibles: <strong>' + avail + '</strong></div>'
+            + '<div style="margin:4px 0;color:#ffc107">📌 Adjudicadas: <strong>' + s.adj + '</strong></div>';
+          tip.style.left = (event.clientX + 16) + 'px';
+          tip.style.top  = (event.clientY - 16) + 'px';
+        }
+      })
+      .on('mousemove', function(event) {
+        if (tip) { tip.style.left = (event.clientX+16)+'px'; tip.style.top = (event.clientY-16)+'px'; }
+      })
+      .on('mouseout', function() {
+        d3.select(this).attr('stroke', '#1a1f2e').attr('stroke-width', 0.6);
+        if (tip) tip.style.display = 'none';
+      });
+
+    // Etiquetas
+    root.selectAll('text.dlbl')
+      .data(geo.features)
+      .enter().append('text')
+      .attr('class', 'dlbl')
+      .attr('transform', function(d) {
+        var c = path.centroid(d);
+        return (isNaN(c[0]) ? 'translate(-999,-999)' : 'translate(' + c + ')');
+      })
+      .attr('text-anchor', 'middle').attr('dy', '0.35em')
+      .style('font-size', '6.5px')
+      .style('font-family', "'IBM Plex Mono', monospace")
+      .style('font-weight', '700')
+      .style('fill', 'rgba(255,255,255,0.92)')
+      .style('pointer-events', 'none')
+      .text(function(d) {
+        var name = getName(d);
+        return ABBR[name] || (name.length > 8 ? name.substring(0, 8) : name);
+      });
+  }
+
+  if (_mapGeoCache) { draw(_mapGeoCache); return; }
+
+  svgEl.innerHTML = '<text x="230" y="280" text-anchor="middle" fill="#64748b" font-size="13" font-family="sans-serif">Cargando mapa...</text>';
+
+  var URLS = [
+    'https://raw.githubusercontent.com/juaneladio/peru-geojson/master/peru_departamental_simple.geojson',
+    'https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/peru-departments.geojson'
+  ];
+  function tryNext(i) {
+    if (i >= URLS.length) {
+      svgEl.innerHTML = '<text x="230" y="270" text-anchor="middle" fill="#64748b" font-size="13" font-family="sans-serif">No se pudo cargar el mapa.</text>'
+        + '<text x="230" y="295" text-anchor="middle" fill="#64748b" font-size="10" font-family="sans-serif">Requiere conexion a internet.</text>';
+      return;
+    }
+    fetch(URLS[i])
+      .then(function(r){ if (!r.ok) throw 0; return r.json(); })
+      .then(draw)
+      .catch(function(){ tryNext(i + 1); });
+  }
+  tryNext(0);
+}
+
 
 // INIT
 initTheme();
