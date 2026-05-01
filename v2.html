@@ -807,11 +807,11 @@
 <div class="panel" id="panel-mapa">
   <div style="padding:20px 28px">
     <div id="mapa-summary" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:22px"></div>
-    <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
+    <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start">
       <div style="flex:0 0 auto;position:relative">
-        <svg id="peru-map-svg" viewBox="0 0 460 560" style="width:min(420px,calc(100vw - 60px));display:block;border-radius:10px;background:var(--surface2)"></svg>
+        <svg id="peru-map-svg" viewBox="0 0 460 560" style="width:min(620px,calc(100vw - 260px));display:block;border-radius:10px;background:var(--surface2)"></svg>
       </div>
-      <div style="flex:1;min-width:220px;max-height:560px;overflow-y:auto;padding-right:4px" id="mapa-stats-list"></div>
+      <div style="flex:0 0 170px;width:170px;max-height:680px;overflow-y:auto;padding-right:2px" id="mapa-stats-list"></div>
     </div>
     <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;align-items:center">
       <span style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.05em">DISPONIBILIDAD:</span>
@@ -2229,31 +2229,31 @@ function renderMapa() {
     ['✅ Disponibles',         dispAll,  '#2ed573'],
     ['📌 Adjudicadas',   adjAll,   '#ffc107']
   ].map(function(x) {
-    return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 20px;text-align:center;min-width:110px">'
-      + '<div style="font-size:26px;font-weight:700;color:' + x[2] + ';font-family:\'IBM Plex Mono\',monospace">' + x[1] + '</div>'
-      + '<div style="font-size:11px;color:var(--muted);margin-top:3px">' + x[0] + '</div>'
+    return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;text-align:center;min-width:90px">'
+      + '<div style="font-size:22px;font-weight:700;color:' + x[2] + ';font-family:\'IBM Plex Mono\',monospace">' + x[1] + '</div>'
+      + '<div style="font-size:10px;color:var(--muted);margin-top:2px">' + x[0] + '</div>'
       + '</div>';
   }).join('');
 
   // Lista lateral
   if (listEl) {
     var sorted = Object.entries(depts).sort(function(a,b){ return b[1].total - a[1].total; });
-    listEl.innerHTML = '<div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.06em;padding:0 4px 8px;border-bottom:1px solid var(--border);margin-bottom:4px">DEPARTAMENTO &nbsp;&middot;&nbsp; TOT &nbsp;&middot;&nbsp; DISP &nbsp;&middot;&nbsp; ADJ</div>'
+    listEl.innerHTML = '<div style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:0 2px 6px;border-bottom:1px solid var(--border);margin-bottom:2px">DPTO · T · D · A</div>'
       + sorted.map(function(entry) {
         var dept = entry[0], s = entry[1];
         var avail = Math.max(0, s.total - s.adj);
         var pct   = s.total > 0 ? Math.round(s.adj / s.total * 100) : 0;
         var col   = _mapaColor(s);
-        return '<div style="padding:6px 4px;border-bottom:1px solid rgba(58,69,85,.5)">'
-          + '<div style="display:flex;align-items:center;gap:7px">'
-          + '<div style="width:9px;height:9px;border-radius:2px;background:' + col + ';flex-shrink:0"></div>'
-          + '<span style="font-size:11px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + dept + '</span>'
-          + '<span style="font-size:10px;color:var(--muted)"><strong style="color:var(--text)">' + s.total + '</strong></span>'
-          + '<span style="font-size:10px;color:#2ed573"><strong>' + avail + '</strong></span>'
-          + '<span style="font-size:10px;color:#ffc107"><strong>' + s.adj + '</strong></span>'
+        return '<div style="padding:3px 2px;border-bottom:1px solid rgba(58,69,85,.4)">'
+          + '<div style="display:flex;align-items:center;gap:5px">'
+          + '<div style="width:7px;height:7px;border-radius:1px;background:' + col + ';flex-shrink:0"></div>'
+          + '<span style="font-size:9px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + dept + '</span>'
+          + '<span style="font-size:9px;color:var(--muted)"><strong style="color:var(--text)">' + s.total + '</strong></span>'
+          + '<span style="font-size:9px;color:#2ed573"><strong>' + avail + '</strong></span>'
+          + '<span style="font-size:9px;color:#ffc107"><strong>' + s.adj + '</strong></span>'
           + '</div>'
-          + '<div style="height:3px;background:var(--border);border-radius:2px;margin-top:5px">'
-          + '<div style="height:3px;width:' + pct + '%;background:' + col + ';border-radius:2px"></div>'
+          + '<div style="height:2px;background:var(--border);border-radius:1px;margin-top:3px">'
+          + '<div style="height:2px;width:' + pct + '%;background:' + col + ';border-radius:1px"></div>'
           + '</div></div>';
       }).join('');
   }
