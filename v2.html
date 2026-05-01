@@ -617,10 +617,6 @@
     📋 Todas las plazas
     <span class="tab-count" id="count-todas">0</span>
   </button>
-  <button class="tab-btn" id="tab-no-des" onclick="switchTab('no-des')">
-    ❌ No deseadas
-    <span class="tab-count" id="count-no-des">0</span>
-  </button>
   <button class="tab-btn" id="tab-dep" onclick="switchTab('dep')">
     ✅ Adjudicadas
     <span class="tab-count" id="count-dep">0</span>
@@ -797,55 +793,6 @@
   </div>
 </div>
 
-<!-- TAB 3: NO DESEADAS -->
-<div class="panel" id="panel-no-des">
-  <div class="filters">
-    <span class="filter-label">NO DESEADAS:</span>
-    <input type="text" id="search-no-des" placeholder="🔍 Buscar..." oninput="renderNoDeseadas()">
-    <select id="f-nd-depto" onchange="onNdDeptoChange()"><option value="">— Departamento —</option><option>AMAZONAS</option><option>ANCASH</option><option>APURIMAC</option><option>AREQUIPA</option><option>AYACUCHO</option><option>CAJAMARCA</option><option>CALLAO</option><option>CUSCO</option><option>HUANCAVELICA</option><option>HUANUCO</option><option>ICA</option><option>JUNIN</option><option>LA LIBERTAD</option><option>LAMBAYEQUE</option><option>LIMA</option><option>LORETO</option><option>MADRE DE DIOS</option><option>MOQUEGUA</option><option>PASCO</option><option>PIURA</option><option>PUNO</option><option>SAN MARTIN</option><option>TACNA</option><option>TUMBES</option><option>UCAYALI</option></select>
-    <select id="f-nd-inst" onchange="renderNoDeseadas()"><option value="">— Institución —</option><option>GOBIERNO REGIONAL</option><option>ESSALUD</option><option>MINSA</option><option>SANIDAD DE LA POLICIA NACIONAL DEL PERU</option><option>SANIDAD DEL EJERCITO DEL PERU</option><option>SANIDAD DE LA MARINA DE GUERRA DEL PERU</option><option>SANIDAD DE LA FUERZA AEREA DEL PERU</option></select>
-    <select id="f-nd-prov" onchange="onNdProvChange()"><option value="">— Provincia —</option></select>
-    <select id="f-nd-dist" onchange="renderNoDeseadas()"><option value="">— Distrito —</option></select>
-    <select id="f-nd-pres" onchange="renderNoDeseadas()"><option value="">— Presupuesto —</option><option>REGIONAL</option><option>NACIONAL</option><option>ESSALUD</option><option>PNP</option><option>EP</option><option>MGP</option><option>FAP</option></select>
-    <select id="f-nd-gd" onchange="renderNoDeseadas()"><option value="">— Dificultad —</option><option>GD-1</option><option>GD-2</option><option>GD-3</option><option>GD-4</option><option>GD-5</option></select>
-    <select id="f-nd-cat" onchange="renderNoDeseadas()"><option value="">— Categoría —</option><option>I-1</option><option>I-2</option><option>I-3</option><option>I-4</option></select>
-    <select id="f-nd-zaf" onchange="renderNoDeseadas()"><option value="">— ZAF —</option><option value="SI">ZAF: Sí</option><option value="NO">ZAF: No</option></select>
-    <select id="f-nd-ze" onchange="renderNoDeseadas()"><option value="">— ZE —</option><option value="SI">ZE: Sí</option><option value="NO">ZE: No</option></select>
-    <button class="btn-clear" onclick="clearNdFilters()">✕ Limpiar</button>
-  </div>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Región</th>
-          <th>Institución</th>
-          <th>Provincia</th>
-          <th>Distrito</th>
-          <th>Establecimiento</th>
-          <th>Presupuesto</th>
-          <th>Plazas</th>
-          <th>DIRESA</th>
-          <th>Dificultad</th>
-          <th>RENIPRESS</th>
-          <th>Cat.</th>
-          <th>ZAF</th>
-          <th>ZE</th>
-          <th>Médico adjudicado</th>
-          <th>Motivo rechazo</th>
-          <th>Hora</th>
-          <th>Acción</th>
-        </tr>
-      </thead>
-      <tbody id="tbody-no-des"></tbody>
-    </table>
-    <div class="empty" id="empty-no-des" style="display:none">
-      <div class="empty-icon">❌</div>
-      No hay plazas no deseadas.
-    </div>
-  </div>
-</div>
-
 <!-- TAB 4: ESTADÍSTICAS -->
 <div class="panel" id="panel-stats">
   <div style="padding: 28px;">
@@ -1004,38 +951,6 @@ function clearDepFilters() {
   renderDepuradas();
 }
 
-// ── Filtros dinámicos Tab No deseadas ──
-function onNdDeptoChange() {
-  const depto = document.getElementById('f-nd-depto').value;
-  const src = depto ? no_deseadas.filter(r => r['DEPARTAMENTO'] === depto) : no_deseadas;
-  const provSel = document.getElementById('f-nd-prov');
-  const distSel = document.getElementById('f-nd-dist');
-  provSel.innerHTML = '<option value="">— Provincia —</option>';
-  distSel.innerHTML = '<option value="">— Distrito —</option>';
-  [...new Set(src.map(r => r['PROVINCIA']).filter(Boolean))].sort().forEach(p => {
-    const o = document.createElement('option'); o.value = p; o.textContent = p; provSel.appendChild(o);
-  });
-  renderNoDeseadas();
-}
-function onNdProvChange() {
-  const depto = document.getElementById('f-nd-depto').value;
-  const prov  = document.getElementById('f-nd-prov').value;
-  const src = no_deseadas.filter(r => (!depto || r['DEPARTAMENTO'] === depto) && (!prov || r['PROVINCIA'] === prov));
-  const distSel = document.getElementById('f-nd-dist');
-  distSel.innerHTML = '<option value="">— Distrito —</option>';
-  [...new Set(src.map(r => r['DISTRITO']).filter(Boolean))].sort().forEach(d => {
-    const o = document.createElement('option'); o.value = d; o.textContent = d; distSel.appendChild(o);
-  });
-  renderNoDeseadas();
-}
-function clearNdFilters() {
-  ['search-no-des','f-nd-depto','f-nd-inst','f-nd-pres','f-nd-prov','f-nd-dist','f-nd-gd','f-nd-cat','f-nd-zaf','f-nd-ze'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
-  document.getElementById('f-nd-prov').innerHTML = '<option value="">— Provincia —</option>';
-  document.getElementById('f-nd-dist').innerHTML = '<option value="">— Distrito —</option>';
-  renderNoDeseadas();
-}
 
 function renderBanPanel() {
   const grid = document.getElementById('ban-dept-grid');
@@ -1290,8 +1205,6 @@ function exportarHTML() {
   clone.querySelector('#tbody-todas').innerHTML = '';
   const depTbody = clone.querySelector('#tbody-dep');
   if (depTbody) depTbody.innerHTML = '';
-  const noDesTbody = clone.querySelector('#tbody-no-des');
-  if (noDesTbody) noDesTbody.innerHTML = '';
   let html = '<!DOCTYPE html>\n' + clone.outerHTML;
   html = html.replace('</head>', initScript + '\n</head>');
   const blob = new Blob([html], {type: 'text/html;charset=utf-8'});
@@ -1318,7 +1231,6 @@ function switchTab(tab) {
   document.getElementById('tab-' + tab).classList.add('active');
   document.getElementById('panel-' + tab).classList.add('active');
   if (tab === 'dep') renderDepuradas();
-  else if (tab === 'no-des') renderNoDeseadas();
   else if (tab === 'stats') renderStats();
   else applyFilters();
 }
@@ -1376,13 +1288,15 @@ function _getNextOrdAdj() {
 function _doDepurar(rowId, motivo, tipo = 'depurada') {
   const row = RAW[rowId];
   if (!row || depIds.has(rowId)) return;
-  depIds.add(rowId);
   const time = new Date().getTime();
 
   if (tipo === 'depurada') {
+    depIds.add(rowId);
     const timeStr = new Date(time).toLocaleTimeString('es-PE', {hour:'2-digit', minute:'2-digit'});
     depuradas.push({...row, _rowId: rowId, _timestamp: time, _motivo: motivo || '', _tipo: 'depurada', _ordAdj: _getNextOrdAdj()});
   } else {
+    // no-deseada: queda visible en la lista principal (al fondo, en rojo)
+    if (no_deseadas.some(d => d._rowId === rowId)) return; // evitar duplicados
     no_deseadas.push({...row, _rowId: rowId, _timestamp: time, _motivo: motivo || '', _tipo: 'no-deseada'});
   }
 
@@ -1486,10 +1400,8 @@ function updateMotivo(rowId, val) {
 
 function updateCounts() {
   const n = depuradas.length;
-  const nnd = no_deseadas.length;
   document.getElementById('badge-count').textContent = n;
   document.getElementById('count-dep').textContent = n;
-  document.getElementById('count-no-des').textContent = nnd;
   document.getElementById('dep-count-bar').textContent = n;
   const nFav = getFavs().length;
   const favBadge = document.getElementById('fav-count-badge');
@@ -1520,7 +1432,7 @@ function getFiltered() {
 
   const _noDesIds = new Set(no_deseadas.map(d => d._rowId));
   let rows = RAW.map((r, i) => ({...r, _rowId: i}))
-               .filter(r => !depIds.has(r._rowId) && !_noDesIds.has(r._rowId))
+               .filter(r => !depIds.has(r._rowId))
                .filter(_favFilter);
 
   const q        = (document.getElementById('search')?.value     || '').toLowerCase();
@@ -1561,8 +1473,9 @@ function getFiltered() {
     });
   }
 
-  // Excluir registros con todas las plazas depuradas
+  // Excluir registros con todas las plazas depuradas (no deseadas siempre visibles)
   rows = rows.filter(r => {
+    if (_noDesIds.has(r._rowId)) return true;
     const total = parseInt(r['N° PLAZAS']) || 1;
     const tomadas = getTomada(r._rowId);
     return tomadas < total;
@@ -1600,7 +1513,17 @@ function buildRow(r) {
     ? `<span class="plaza-badge ${badgeClass}">${tom}/${total}</span>`
     : `<span class="plaza-badge ${badgeClass}">1</span>`;
   const isSel = selectedSet.has(r._rowId);
-  return `<tr class="${isSel?'row-selected':''}" onclick="handleRowClick(event,${r._rowId})" style="cursor:pointer">
+  const isNoDes = no_deseadas.some(d => d._rowId === r._rowId);
+  const rowStyle = isNoDes
+    ? 'cursor:pointer;background:rgba(255,71,87,0.13);border-left:3px solid #ff4757;'
+    : 'cursor:pointer';
+  const actionCell = isNoDes
+    ? `<td style="padding:4px 6px;text-align:center"><div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
+        <button class="btn-depurar" style="background:linear-gradient(135deg,#2ed573,#16a34a);color:#000;font-size:10px" onclick="depurarDesdeNoDeseada(${r._rowId})">✅ ADJUDICAR</button>
+        <button class="btn-regresar" style="font-size:10px" onclick="regresarNoDeseada(${r._rowId})">↩ Quitar</button>
+      </div></td>`
+    : `<td style="padding:4px 6px;text-align:center"><button class="btn-depurar" onclick="depurar(${r._rowId})">DEPURAR</button></td>`;
+  return `<tr class="${isSel?'row-selected':''}" onclick="handleRowClick(event,${r._rowId})" style="${rowStyle}">
       <td style="text-align:center;white-space:nowrap;padding:4px 6px">${(() => {
         const favs = getFavs();
         const fi = favs.indexOf(r._rowId);
@@ -1614,11 +1537,11 @@ function buildRow(r) {
         return `<button class="btn-fav ${isOn?'fav-on':'fav-off'}" onclick="toggleFav(${r._rowId})" title="${isOn?'Quitar favorito':'Agregar favorito'}">⭐</button>${moveCtrl}`;
       })()}</td>
       <td class="num">${r['NUM']}</td>
-      <td style="font-size:11px;font-weight:500;color:var(--text)">${r['DEPARTAMENTO']||'—'}</td>
+      <td style="font-size:11px;font-weight:500;color:${isNoDes?'#ff4757':'var(--text)'}">${r['DEPARTAMENTO']||'—'}</td>
       <td style="font-size:10px;color:var(--muted)">${r['INSTITUCION']||'—'}</td>
       <td style="font-size:10px;color:var(--muted)">${r['PROVINCIA']||'—'}</td>
       <td style="font-size:10px;color:var(--muted)">${r['DISTRITO']||'—'}</td>
-      <td style="max-width:180px;white-space:normal;line-height:1.3;font-size:11px;font-weight:500">${r['NOMBRE DE ESTABLECIMIENTO']||'—'}</td>
+      <td style="max-width:180px;white-space:normal;line-height:1.3;font-size:11px;font-weight:500">${r['NOMBRE DE ESTABLECIMIENTO']||'—'}${isNoDes?'<span style="margin-left:6px;font-size:9px;color:#ff4757;font-family:\'IBM Plex Mono\',monospace;font-weight:700;vertical-align:middle">NO DESEADA</span>':''}</td>
       <td style="font-size:10px;color:var(--muted)">${r['PRESUPUESTO']||'—'}</td>
       <td style="text-align:center">${plazaCounter}</td>
       <td style="font-size:10px;color:var(--muted)">${r['DIRESA']||'—'}</td>
@@ -1628,7 +1551,7 @@ function buildRow(r) {
       <td>${zaf ? '<span class="pill pill-zaf">ZAF</span>' : '<span style="color:var(--muted);font-size:10px">—</span>'}</td>
       <td>${ze  ? '<span class="pill pill-ze">ZE</span>'   : '<span style="color:var(--muted);font-size:10px">—</span>'}</td>
       <td style="max-width:160px;white-space:normal;line-height:1.3;font-size:10px;color:var(--accent)">${r['MEDICO']||'—'}</td>
-      <td style="padding:4px 6px;text-align:center"><button class="btn-depurar" onclick="depurar(${r._rowId})">DEPURAR</button></td>
+      ${actionCell}
     </tr>`;
 }
 
@@ -1655,7 +1578,13 @@ function loadMore() {
 function applyFilters() {
   let rows = getFiltered();
   const _sortFavs = getFavs();
-  rows.sort((a, b) => {
+  const _noDesSet = new Set(no_deseadas.map(d => d._rowId));
+
+  // Separar no deseadas para ponerlas al final
+  const regular = rows.filter(r => !_noDesSet.has(r._rowId));
+  const noDes   = rows.filter(r =>  _noDesSet.has(r._rowId));
+
+  regular.sort((a, b) => {
     const ai = _sortFavs.indexOf(a._rowId);
     const bi = _sortFavs.indexOf(b._rowId);
     if (ai !== -1 && bi !== -1) return ai - bi;
@@ -1665,6 +1594,8 @@ function applyFilters() {
     if (typeof va === 'number') return (va - vb) * sortDir;
     return String(va||'').localeCompare(String(vb||''), 'es') * sortDir;
   });
+
+  rows = [...regular, ...noDes];
 
   const visPlazas = rows.reduce((s, r) => s + (parseInt(r['N° PLAZAS']) || 1), 0);
   document.getElementById('count-todas').textContent = rows.length;
@@ -2170,84 +2101,6 @@ function confirmTipoDepuracion(tipo) {
   _tipoDepuracionRowId = null;
 }
 
-function renderNoDeseadas() {
-  const q    = (document.getElementById('search-no-des')?.value||'').toLowerCase();
-  const fdep = document.getElementById('f-nd-depto')?.value||'';
-  const finst= document.getElementById('f-nd-inst')?.value||'';
-  const fpres= document.getElementById('f-nd-pres')?.value||'';
-  const fprov= document.getElementById('f-nd-prov')?.value||'';
-  const fdist= document.getElementById('f-nd-dist')?.value||'';
-  const fgd  = document.getElementById('f-nd-gd')?.value||'';
-  const fcat = document.getElementById('f-nd-cat')?.value||'';
-  const fzaf = document.getElementById('f-nd-zaf')?.value||'';
-  const fze  = document.getElementById('f-nd-ze')?.value||'';
-  let rows = no_deseadas.filter(r => {
-    if (q && !(
-      (r['NOMBRE DE ESTABLECIMIENTO']||'').toLowerCase().includes(q) ||
-      (r['DEPARTAMENTO']||'').toLowerCase().includes(q) ||
-      (r['DISTRITO']||'').toLowerCase().includes(q) ||
-      (r['MEDICO']||'').toLowerCase().includes(q) ||
-      (r['INSTITUCION']||'').toLowerCase().includes(q)
-    )) return false;
-    if (fdep  && r['DEPARTAMENTO'] !== fdep) return false;
-    if (finst && r['INSTITUCION'] !== finst) return false;
-    if (fpres && r['PRESUPUESTO'] !== fpres) return false;
-    if (fprov && r['PROVINCIA'] !== fprov) return false;
-    if (fdist && r['DISTRITO'] !== fdist) return false;
-    if (fgd   && r['GRADO DE DIFICULTAD'] !== fgd) return false;
-    if (fcat  && r['CATEGORIA'] !== fcat) return false;
-    if (fzaf  && (r['ZAF']||'').toUpperCase() !== fzaf) return false;
-    if (fze   && (r['ZE']||'').toUpperCase()  !== fze)  return false;
-    return true;
-  });
-
-  const tbody = document.getElementById('tbody-no-des');
-  if (!tbody) return;
-
-  if (rows.length === 0) {
-    tbody.innerHTML = '';
-    const empty = document.getElementById('empty-no-des');
-    if (empty) empty.style.display = 'block';
-    return;
-  }
-  const empty = document.getElementById('empty-no-des');
-  if (empty) empty.style.display = 'none';
-
-  tbody.innerHTML = rows.map(r => {
-    const gd  = r['GRADO DE DIFICULTAD'];
-    const zaf = r['ZAF'] === 'SI' || r['ZAF'] === 'SÍ';
-    const ze  = r['ZE']  === 'SI' || r['ZE']  === 'SÍ';
-    const reni = r['CÓDIGO RENIPRESS2'] ? String(r['CÓDIGO RENIPRESS2']).padStart(8,'0') : '—';
-    return `<tr style="opacity:0.85">
-      <td class="num">${r['NUM']||'—'}</td>
-      <td style="font-size:11px;font-weight:500">${r['DEPARTAMENTO']||'—'}</td>
-      <td style="font-size:10px;color:var(--muted)">${r['INSTITUCION']||'—'}</td>
-      <td style="font-size:10px;color:var(--muted)">${r['PROVINCIA']||'—'}</td>
-      <td style="font-size:10px;color:var(--muted)">${r['DISTRITO']||'—'}</td>
-      <td style="max-width:160px;white-space:normal;line-height:1.3;font-size:11px;font-weight:500">${r['NOMBRE DE ESTABLECIMIENTO']||'—'}</td>
-      <td style="font-size:10px;color:var(--muted)">${r['PRESUPUESTO']||'—'}</td>
-      <td class="num">${r['N° PLAZAS']||'1'}</td>
-      <td style="font-size:10px;color:var(--muted)">${r['DIRESA']||'—'}</td>
-      <td><span class="pill ${gdClass(gd)}">${gd||'—'}</span></td>
-      <td class="num" style="font-size:10px">${reni}</td>
-      <td><span class="pill pill-cat">${r['CATEGORIA']||'—'}</span></td>
-      <td>${zaf ? '<span class="pill pill-zaf">ZAF</span>' : '<span style="color:var(--muted);font-size:10px">—</span>'}</td>
-      <td>${ze  ? '<span class="pill pill-ze">ZE</span>'   : '<span style="color:var(--muted);font-size:10px">—</span>'}</td>
-      <td style="max-width:160px;white-space:normal;line-height:1.3;font-size:10px;color:var(--accent)">${r['MEDICO']||'—'}</td>
-      <td class="dep-reason"><input type="text" value="${r._motivo||''}" placeholder="ej. ocupada, lejos..." onchange="updateMotivoNoDeseada(${r._rowId}, this.value)"></td>
-      <td class="timestamp">${r._timestamp ? new Date(r._timestamp).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}) : '—'}</td>
-      <td style="padding:4px 6px;text-align:center;display:flex;gap:4px;justify-content:center">
-        <button class="btn-regresar" style="background:linear-gradient(135deg,#2ed573,#16a34a);color:#000" onclick="depurarDesdeNoDeseada(${r._rowId})">ADJUDICADA</button>
-        <button class="btn-regresar" onclick="regresarNoDeseada(${r._rowId})">Regresar</button>
-      </td>
-    </tr>`;
-  }).join('');
-}
-
-function updateMotivoNoDeseada(rowId, val) {
-  const item = no_deseadas.find(d => d._rowId === rowId);
-  if (item) { item._motivo = val; saveState(); }
-}
 
 function regresarNoDeseada(rowId) {
   const item = no_deseadas.find(d => d._rowId === rowId);
@@ -2257,19 +2110,15 @@ function regresarNoDeseada(rowId) {
 
   showConfirm({
     icon: '↩️',
-    title: '¿Regresar esta plaza?',
-    msg: `${estab}${dist ? ' · '+dist : ''}${dept ? ' · '+dept : ''}\n\nVolverá al tab Plazas disponibles.`,
-    okText: 'Sí, regresar',
+    title: '¿Quitar de "No deseadas"?',
+    msg: `${estab}${dist ? ' · '+dist : ''}${dept ? ' · '+dept : ''}\n\nVolverá a mostrarse como plaza disponible.`,
+    okText: 'Sí, quitar',
     okClass: 'ok-danger'
   }).then(ok => {
     if (!ok) return;
     no_deseadas = no_deseadas.filter(d => d._rowId !== rowId);
-    depuradas = depuradas.filter(d => d._rowId !== rowId);
-    depIds.delete(rowId);
-    setTomada(rowId, 0);
     saveState();
     updateCounts();
-    renderNoDeseadas();
     applyFilters();
   });
 }
@@ -2296,7 +2145,6 @@ function depurarDesdeNoDeseada(rowId) {
     depuradas.push({...item, _tipo: 'depurada', _timestamp: time, _ordAdj: _getNextOrdAdj()});
     saveState();
     updateCounts();
-    renderNoDeseadas();
     applyFilters();
   });
 }
@@ -2442,9 +2290,8 @@ function _fbLoad(data, fromRemote){
     localStorage.setItem(BAN_KEY,    JSON.stringify(data.bn||[]));
     localStorage.setItem(TOMADAS_KEY,JSON.stringify(data.tm||{}));
     updateCounts(); renderBannedChips(); applyFilters();
-    if(currentTab==='dep')    renderDepuradas();
-    if(currentTab==='no-des') renderNoDeseadas();
-    if(currentTab==='stats')  renderStats();
+    if(currentTab==='dep')   renderDepuradas();
+    if(currentTab==='stats') renderStats();
     // Toast de sincronización remota
     if(fromRemote) _showSyncToast();
   } catch(e){ console.error('[FB] _fbLoad error:',e); }
