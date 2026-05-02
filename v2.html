@@ -2191,10 +2191,26 @@ function depurarDesdeNoDeseada(rowId) {
     okClass: 'ok-danger'
   }).then(ok => {
     if (!ok) return;
-    no_deseadas = no_deseadas.filter(d => d._rowId !== rowId);
-    depIds.add(rowId);
-    const time = new Date().getTime();
-    depuradas.push({...item, _tipo: 'depurada', _timestamp: time, _ordAdj: _getNextOrdAdj()});
+    // Eliminar SOLO esta entrada (no todas las del mismo rowId)
+    const idx = no_deseadas.indexOf(item);
+    if (idx !== -1) no_deseadas.splice(idx, 1);
+    const row   = RAW[rowId];
+    const total = parseInt(row?.['N° PLAZAS']) || 1;
+    const time  = new Date().getTime();
+    const depTime = new Date().toLocaleTimeString('es-PE', {hour:'2-digit', minute:'2-digit'});
+    const tomadas = getTomada(rowId);
+    if (total > 1) {
+      // Multi-plaza: misma lógica parcial que depurar()
+      depuradas.push({...item, _tipo:'depurada', _timestamp:time, _depTime:depTime,
+        _motivo:`Plaza adjudicada (${tomadas}/${total})`,
+        _ordAdj:_getNextOrdAdj(), _isPartial:true});
+      // Agregar a depIds solo si ya se ocuparon todas las plazas
+      if (tomadas >= total) depIds.add(rowId);
+    } else {
+      // Plaza única: comportamiento original
+      depIds.add(rowId);
+      depuradas.push({...item, _tipo:'depurada', _timestamp:time, _depTime:depTime, _ordAdj:_getNextOrdAdj()});
+    }
     saveState();
     updateCounts();
     applyFilters();
