@@ -1590,7 +1590,7 @@ function buildRow(r) {
       <td style="font-size:10px;color:var(--muted)">${r['INSTITUCION']||'—'}</td>
       <td style="font-size:10px;color:var(--muted)">${r['PROVINCIA']||'—'}</td>
       <td style="font-size:10px;color:var(--muted)">${r['DISTRITO']||'—'}</td>
-      <td style="max-width:180px;white-space:normal;line-height:1.3;font-size:11px;font-weight:500">${r['NOMBRE DE ESTABLECIMIENTO']||'—'}${isNoDes?'<span style="margin-left:6px;font-size:9px;color:#ff4757;font-family:\'IBM Plex Mono\',monospace;font-weight:700;vertical-align:middle">NO DESEADA</span>':''}</td>
+      <td style="max-width:180px;white-space:normal;line-height:1.3;font-size:11px;font-weight:500">${r['NOMBRE DE ESTABLECIMIENTO']||'—'}${isNoDesStyle?'<span style="margin-left:6px;font-size:9px;color:#ff4757;font-family:\'IBM Plex Mono\',monospace;font-weight:700;vertical-align:middle">NO DESEADA</span>':''}</td>
       <td style="font-size:10px;color:var(--muted)">${r['PRESUPUESTO']||'—'}</td>
       <td style="text-align:center">${plazaCounter}</td>
       <td style="font-size:10px;color:var(--muted)">${r['DIRESA']||'—'}</td>
