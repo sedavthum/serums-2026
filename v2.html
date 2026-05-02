@@ -1184,7 +1184,7 @@ const RAW = [{"NUM":"1","INSTITUCIÓN":"AMAZONAS","PROFESION":"MEDICINA","SEDE":
 // State
 let depuradas = JSON.parse(localStorage.getItem('serums_dep') || '[]');
 let no_deseadas = JSON.parse(localStorage.getItem('serums_no_deseadas') || '[]');
-let depIds = new Set(depuradas.map(d => d._rowId));
+let depIds = new Set(depuradas.filter(d => !d._isPartial).map(d => d._rowId));
 let sortCol = 'Nª';
 let sortDir = 1;
 let currentTab = 'todas';
@@ -2507,7 +2507,7 @@ function _fbLoad(data, fromRemote){
   if(!data)return;
   try {
     depuradas=(data.dep||[]).map(function(d){return Object.assign({},RAW[d.id]||{},{_rowId:d.id,_motivo:d.m||'',_timestamp:d.t||0,_depTime:d.dt||'',_tipo:d.tp||'depurada',_isPartial:!!d.pt,_ordAdj:d.oa||0});});
-    depIds=new Set(depuradas.map(function(d){return d._rowId;}));
+    depIds=new Set(depuradas.filter(function(d){return !d._isPartial;}).map(function(d){return d._rowId;}));
     no_deseadas=(data.nd||[]).map(function(d){return Object.assign({},RAW[d.id]||{},{_rowId:d.id,_motivo:d.m||'',_timestamp:d.t||0,_isPartial:!!d.pt,_tipo:'no-deseada'});});
     // Actualizar localStorage (para tener caché local actualizada)
     localStorage.setItem('serums_dep',          JSON.stringify(depuradas));
