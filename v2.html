@@ -2001,6 +2001,7 @@ function initTheme() {
 function exportToExcel() {
   const wb = XLSX.utils.book_new();
   const rows = depuradas.map(r => ({
+    'ORD. ADJ.': r._ordAdj || '—',
     'REGIÓN': r['DEPARTAMENTO'] || '—',
     'INSTITUCIÓN': r['INSTITUCION'] || '—',
     'PROVINCIA': r['PROVINCIA'] || '—',
@@ -2020,7 +2021,7 @@ function exportToExcel() {
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
   ws['!cols'] = [
-    { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 30 },
+    { wch: 10 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 30 },
     { wch: 18 }, { wch: 8 }, { wch: 15 }, { wch: 12 }, { wch: 12 },
     { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 25 }, { wch: 25 }, { wch: 18 }
   ];
