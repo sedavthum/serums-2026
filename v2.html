@@ -1394,9 +1394,15 @@ function regresar(rowId) {
     if (!ok) return;
     const total = parseInt(row?.['N° PLAZAS']) || 1;
     if (dep && dep._isPartial && total > 1) {
-      depuradas = depuradas.filter(d => d._rowId !== rowId);
+      // Eliminar SOLO esta entrada (puede haber varias del mismo rowId)
+      const idx = depuradas.indexOf(dep);
+      if (idx !== -1) depuradas.splice(idx, 1);
       const cur = getTomada(rowId);
       setTomada(rowId, Math.max(0, cur - 1));
+      // Si ya no queda ninguna parcial para este rowId, limpiar depIds también
+      if (!depuradas.some(d => d._rowId === rowId)) {
+        depIds.delete(rowId);
+      }
     } else {
       depuradas = depuradas.filter(d => d._rowId !== rowId);
       depIds.delete(rowId);
