@@ -1185,6 +1185,8 @@ const RAW = [{"NUM":"1","INSTITUCIÓN":"AMAZONAS","PROFESION":"MEDICINA","SEDE":
 let depuradas   = JSON.parse(localStorage.getItem('serums_dep')             || '[]');
 let no_deseadas = JSON.parse(localStorage.getItem('serums_no_deseadas')     || '[]');
 let noDesLabels = new Set(JSON.parse(localStorage.getItem('serums_noDes_labels') || '[]'));
+// Compatibilidad: poblar noDesLabels desde no_deseadas existentes (datos previos al fix)
+no_deseadas.forEach(d => noDesLabels.add(d._rowId));
 let depIds = new Set(depuradas.filter(d => !d._isPartial).map(d => d._rowId));
 let sortCol = 'Nª';
 let sortDir = 1;
@@ -2559,6 +2561,8 @@ function _fbLoad(data, fromRemote){
     depIds=new Set(depuradas.filter(function(d){return !d._isPartial;}).map(function(d){return d._rowId;}));
     no_deseadas=(data.nd||[]).map(function(d){return Object.assign({},RAW[d.id]||{},{_rowId:d.id,_motivo:d.m||'',_timestamp:d.t||0,_isPartial:!!d.pt,_tipo:'no-deseada'});});
     noDesLabels=new Set(data.nl||[]);
+    // Compatibilidad: poblar noDesLabels desde no_deseadas (datos previos al fix)
+    no_deseadas.forEach(function(d){noDesLabels.add(d._rowId);});
     // Actualizar localStorage (para tener caché local actualizada)
     localStorage.setItem('serums_dep',           JSON.stringify(depuradas));
     localStorage.setItem('serums_no_deseadas',   JSON.stringify(no_deseadas));
