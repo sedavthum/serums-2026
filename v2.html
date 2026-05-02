@@ -1342,12 +1342,14 @@ function depurar(rowId) {
   const dept  = row['DEPARTAMENTO'] ? ` · ${row['DEPARTAMENTO']}` : '';
   const dist  = row['DISTRITO']     ? `, ${row['DISTRITO']}`      : '';
   const total = parseInt(row['N° PLAZAS']) || 1;
-  const tomadas = getTomada(rowId);
 
   // Si hay múltiples plazas, mostrar confirmación para depurar 1
   if (total > 1) {
-    // Verificar si ya se depuraron todas las plazas
-    if (tomadas >= total) {
+    // Fuente de verdad: contar adjudicadas desde depuradas (inmune a localStorage rancio)
+    const adjCount = depuradas.filter(d => d._rowId === rowId && d._isPartial).length;
+    const noDesCount = no_deseadas.filter(d => d._rowId === rowId).length;
+    // Verificar si ya se adjudicaron todas las plazas
+    if (adjCount >= total) {
       showConfirm({
         icon: '⚠️',
         title: 'Todas las plazas adjudicadas',
@@ -1358,16 +1360,18 @@ function depurar(rowId) {
       return;
     }
 
-    const newTomada = tomadas + 1;
-    const infoPlazas = `${estab}${dist}${dept}\n📋 Cupo ${newTomada}/${total}`;
+    const newTomada = adjCount + 1;         // próxima plaza adjudicada
+    const slotNum   = adjCount + noDesCount + 1; // cupo total (adj + no-des + esta)
+    const infoPlazas = `${estab}${dist}${dept}\n📋 Cupo ${slotNum}/${total}`;
     showTipoDepuracion(rowId, infoPlazas).then(tipo => {
       if (!tipo) return;
-      setTomada(rowId, newTomada);
       const time = new Date().toLocaleTimeString('es-PE', {hour:'2-digit', minute:'2-digit'});
       if (tipo === 'depurada') {
+        setTomada(rowId, newTomada); // solo incrementa para adjudicados, nunca para no-deseada
         depuradas.push({...row, _rowId: rowId, _depTime: time, _motivo: `Plaza depurada (${newTomada}/${total})`, _isPartial: true, _tipo: 'depurada', _ordAdj: _getNextOrdAdj()});
       } else {
-        no_deseadas.push({...row, _rowId: rowId, _timestamp: Date.now(), _motivo: `No deseada (${newTomada}/${total})`, _isPartial: true, _tipo: 'no-deseada'});
+        // NO llamar setTomada: marcar no-deseada no consume plaza adjudicada
+        no_deseadas.push({...row, _rowId: rowId, _timestamp: Date.now(), _motivo: `No deseada (${slotNum}/${total})`, _isPartial: true, _tipo: 'no-deseada'});
         noDesLabels.add(rowId); // label persiste aunque se adjudique después
       }
       saveState(); updateCounts(); applyFilters();
@@ -1514,12 +1518,15 @@ function getFiltered() {
     });
   }
 
-  // Excluir registros con todas las plazas depuradas (no deseadas siempre visibles)
+  // Excluir registros con todas las plazas adjudicadas (no deseadas siempre visibles)
   rows = rows.filter(r => {
     if (_noDesIds.has(r._rowId)) return true;
     const total = parseInt(r['N° PLAZAS']) || 1;
-    const tomadas = getTomada(r._rowId);
-    return tomadas < total;
+    // Para multi-plaza usamos depuradas (fuente de verdad), inmune a datos rancios de localStorage
+    const adjCount = total > 1
+      ? depuradas.filter(d => d._rowId === r._rowId && d._isPartial).length
+      : getTomada(r._rowId);
+    return adjCount < total;
   });
 
   const _banned = getBanned();
@@ -1546,7 +1553,11 @@ function buildRow(r) {
   const zaf   = r['ZAF'] === 'SI' || r['ZAF'] === 'SÍ';
   const ze    = r['ZE']  === 'SI' || r['ZE']  === 'SÍ';
   const total = parseInt(r['N° PLAZAS']) || 1;
-  const tom   = getTomada(r._rowId);
+  // Contar SOLO las plazas realmente adjudicadas (depuradas parciales) — ignora no-deseadas
+  // Esto es inmune a datos viejos en localStorage donde no-deseada incrementaba tomadas
+  const tom = total > 1
+    ? depuradas.filter(d => d._rowId === r._rowId && d._isPartial).length
+    : getTomada(r._rowId);
   let badgeClass = 'p-libre';
   if (tom > 0 && tom < total) badgeClass = 'p-parcial';
   if (tom >= total)            badgeClass = 'p-lleno';
@@ -2172,17 +2183,17 @@ function regresarNoDeseada(rowId) {
     if (idx !== -1) no_deseadas.splice(idx, 1);
     // Si ya no quedan entradas de no-deseada para este rowId → quitar label también
     if (!no_deseadas.some(d => d._rowId === rowId)) noDesLabels.delete(rowId);
-    // Actualizar tomadas: si no quedan entradas → tom=0; si quedan → decrementar
+    // Actualizar tomadas: no-deseada nunca incrementó tomadas, así que no decrementar
     if (total <= 1) {
       setTomada(rowId, 0);
     } else {
       const hasMore = depuradas.some(d => d._rowId === rowId) || no_deseadas.some(d => d._rowId === rowId);
-      if (hasMore) {
-        setTomada(rowId, Math.max(0, getTomada(rowId) - 1));
-      } else {
+      if (!hasMore) {
+        // Sin entradas restantes: resetear completamente
         setTomada(rowId, 0);
         depIds.delete(rowId);
       }
+      // Si aún quedan entradas, tomadas ya refleja solo adjudicados → no tocar
     }
     saveState();
     updateCounts();
@@ -2213,14 +2224,16 @@ function depurarDesdeNoDeseada(rowId) {
     const total = parseInt(row?.['N° PLAZAS']) || 1;
     const time  = new Date().getTime();
     const depTime = new Date().toLocaleTimeString('es-PE', {hour:'2-digit', minute:'2-digit'});
-    const tomadas = getTomada(rowId);
     if (total > 1) {
-      // Multi-plaza: misma lógica parcial que depurar()
+      // Fuente de verdad: contar desde depuradas (inmune a localStorage rancio)
+      const adjCount = depuradas.filter(d => d._rowId === rowId && d._isPartial).length;
+      const newTomada = adjCount + 1;
+      setTomada(rowId, newTomada);
       depuradas.push({...item, _tipo:'depurada', _timestamp:time, _depTime:depTime,
-        _motivo:`Plaza adjudicada (${tomadas}/${total})`,
+        _motivo:`Plaza adjudicada (${newTomada}/${total})`,
         _ordAdj:_getNextOrdAdj(), _isPartial:true});
       // Agregar a depIds solo si ya se ocuparon todas las plazas
-      if (tomadas >= total) depIds.add(rowId);
+      if (newTomada >= total) depIds.add(rowId);
     } else {
       // Plaza única: comportamiento original
       depIds.add(rowId);
