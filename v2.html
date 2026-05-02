@@ -1397,10 +1397,12 @@ function regresar(rowId) {
       // Eliminar SOLO esta entrada (puede haber varias del mismo rowId)
       const idx = depuradas.indexOf(dep);
       if (idx !== -1) depuradas.splice(idx, 1);
-      const cur = getTomada(rowId);
-      setTomada(rowId, Math.max(0, cur - 1));
-      // Si ya no queda ninguna parcial para este rowId, limpiar depIds también
-      if (!depuradas.some(d => d._rowId === rowId)) {
+      // Si no quedan entradas en NINGÚN array para este rowId → tom=0; si no, decrementar
+      const hasMore = depuradas.some(d => d._rowId === rowId) || no_deseadas.some(d => d._rowId === rowId);
+      if (hasMore) {
+        setTomada(rowId, Math.max(0, getTomada(rowId) - 1));
+      } else {
+        setTomada(rowId, 0);
         depIds.delete(rowId);
       }
     } else {
@@ -2149,7 +2151,23 @@ function regresarNoDeseada(rowId) {
     okClass: 'ok-danger'
   }).then(ok => {
     if (!ok) return;
-    no_deseadas = no_deseadas.filter(d => d._rowId !== rowId);
+    const row = RAW[rowId];
+    const total = parseInt(row?.['N° PLAZAS']) || 1;
+    // Eliminar SOLO esta entrada (no todas las del mismo rowId)
+    const idx = no_deseadas.indexOf(item);
+    if (idx !== -1) no_deseadas.splice(idx, 1);
+    // Actualizar tomadas: si no quedan entradas → tom=0; si quedan → decrementar
+    if (total <= 1) {
+      setTomada(rowId, 0);
+    } else {
+      const hasMore = depuradas.some(d => d._rowId === rowId) || no_deseadas.some(d => d._rowId === rowId);
+      if (hasMore) {
+        setTomada(rowId, Math.max(0, getTomada(rowId) - 1));
+      } else {
+        setTomada(rowId, 0);
+        depIds.delete(rowId);
+      }
+    }
     saveState();
     updateCounts();
     applyFilters();
